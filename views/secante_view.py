@@ -1,8 +1,6 @@
 import streamlit as st
-import sympy as sp
 import pandas as pd
 from utils.funciones import validar_y_preparar_funcion
-from utils.formateo import fmt
 from metodos.secante import ejecutar_secante
 from Services.procesamiento import filtrar_iteraciones
 from plot.graficas import graficar_secante
@@ -13,8 +11,8 @@ def mostrar_secante():
     
     funcion_str = st.text_input("Introduzca f(x):", placeholder="Ej: x^2 - 4")
     col1, col2 = st.columns(2)
-    with col1: x0 = st.number_input("x0:", value=0.0, format="%.6f")
-    with col2: x1 = st.number_input("x-1:", value=1.0, format="%.6f")
+    with col1: x0 = st.number_input("C₀:", value=0.0, format="%.6f")
+    with col2: x1 = st.number_input("C₋₁", value=1.0, format="%.6f")
     tol = st.number_input("Tolerancia (%)", value=0.0001, format="%.6f")
 
     if st.button("Calcular"):
@@ -22,7 +20,7 @@ def mostrar_secante():
         if not valido:
             st.error(error_msg); return
 
-        f_sym, x_sym, f_num, f_der_num, f_visual = datos
+        _, _, f_num, _, f_visual = datos
         ok, msg, iteraciones = ejecutar_secante(f_num, x0, x1, tol)
 
         if not ok:

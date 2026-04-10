@@ -161,3 +161,104 @@ def exportar_excel_secante(df, f, iteraciones):
     wb.save(output)
     output.seek(0)
     return output.getvalue()
+
+def exportar_excel_biseccion(df, f, iteraciones):
+    output = io.BytesIO()
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Bisección"
+
+    # 🔹 Tabla correcta
+    headers = ['i', 'a', 'b', 'Ci', 'f(Ci)', 'Error%']
+    ws.append(headers)
+
+    for row in df.itertuples(index=False):
+        ws.append(list(row))
+
+    # 🔹 Curva
+    last_row, xmin, xmax = _configurar_grafica_base(ws, f, iteraciones)
+
+    # 🔹 Puntos medios (Ci)
+    ws["K1"], ws["L1"] = "x_mid", "y_mid"
+
+    row = 2
+    for it in iteraciones:
+        ws.cell(row=row, column=11, value=it["Ci"])
+        ws.cell(row=row, column=12, value=it["f(Ci)"])
+        row += 1
+
+    # 🔹 Gráfico
+    chart = _crear_chart_base(xmin, xmax)
+    chart.title = "Método de Bisección"
+
+    # f(x)
+    x_ref = Reference(ws, min_col=8, min_row=2, max_row=last_row)
+    y_ref = Reference(ws, min_col=9, min_row=2, max_row=last_row)
+    serie = Series(y_ref, x_ref, title="f(x)")
+    chart.series.append(serie)
+
+    # puntos Ci
+    x_c = Reference(ws, min_col=11, min_row=2, max_row=row - 1)
+    y_c = Reference(ws, min_col=12, min_row=2, max_row=row - 1)
+    serie_c = Series(y_c, x_c, title="Aproximaciones")
+    chart.series.append(serie_c)
+
+    ws.add_chart(chart, "H15")
+
+    # 🔹 Encabezados en negrita
+    for cell in ws[1]:
+        cell.font = Font(bold=True)
+
+    wb.save(output)
+    output.seek(0)
+    return output.getvalue()
+
+def exportar_excel_regla_falsa(df, f, iteraciones):
+    output = io.BytesIO()
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Regla Falsa"
+
+    # Tabla
+    headers = ['i', 'a', 'b', 'Ci', 'f(Ci)', 'Error%']
+    ws.append(headers)
+
+    for row in df.itertuples(index=False):
+        ws.append(list(row))
+
+    # Curva (USANDO TU BASE)
+    last_row, xmin, xmax = _configurar_grafica_base(ws, f, iteraciones)
+
+    # Puntos Ci
+    ws["K1"], ws["L1"] = "x_ci", "y_ci"
+
+    row = 2
+    for it in iteraciones:
+        ws.cell(row=row, column=11, value=it["Ci"])
+        ws.cell(row=row, column=12, value=it["f(Ci)"])
+        row += 1
+
+    # Gráfico 
+    chart = _crear_chart_base(xmin, xmax)
+    chart.title = "Método de la Regla Falsa"
+
+    # f(x)
+    x_ref = Reference(ws, min_col=8, min_row=2, max_row=last_row)
+    y_ref = Reference(ws, min_col=9, min_row=2, max_row=last_row)
+    chart.series.append(Series(y_ref, x_ref, title="f(x)"))
+
+    # puntos
+    x_ci = Reference(ws, min_col=11, min_row=2, max_row=row - 1)
+    y_ci = Reference(ws, min_col=12, min_row=2, max_row=row - 1)
+    chart.series.append(Series(y_ci, x_ci, title="Aproximaciones"))
+
+    ws.add_chart(chart, "H15")
+
+    for cell in ws[1]:
+        cell.font = Font(bold=True)
+
+    wb.save(output)
+    output.seek(0)
+    return output.getvalue()

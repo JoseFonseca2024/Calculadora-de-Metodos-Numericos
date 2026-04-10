@@ -2,7 +2,6 @@ import streamlit as st
 import sympy as sp
 import pandas as pd
 from utils.funciones import validar_y_preparar_funcion
-from utils.formateo import fmt
 from metodos.newton_raphson import ejecutar_newton_raphson
 from Services.procesamiento import filtrar_iteraciones
 from plot.graficas import graficar_newton
@@ -12,7 +11,7 @@ def mostrar_newton_raphson():
     st.title("Método de Newton-Raphson")
     
     funcion_str = st.text_input("Introduzca una función f(x):", placeholder="Ej: x^3 - x - 1")
-    x0 = st.number_input("Punto inicial (x0):", value=0.0, format="%.6f")
+    x0 = st.number_input("Punto inicial (C₀):", value=0.0, format="%.6f")
     tol = st.number_input("Tolerancia (%)", value=0.0001, format="%.6f")
 
     if st.button("Calcular"):

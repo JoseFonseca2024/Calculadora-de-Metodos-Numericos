@@ -1,12 +1,13 @@
 import streamlit as st
-import sympy as sp
 import pandas as pd
+
 from utils.funciones import validar_y_preparar_funcion
 from utils.formateo import fmt
 from metodos.biseccion import ejecutar_biseccion
 from Services.procesamiento import filtrar_iteraciones
 from plot.graficas import graficar_metodo_cerrado
-from Services.exportar_excel import exportar_excel_newton as exportar_excel_bytes
+from Services.exportar_excel import exportar_excel_biseccion
+from utils.evaluacion_segura import evaluar_seguro
 
 def mostrar_biseccion():
     st.title("Método de Bisección")
@@ -30,7 +31,28 @@ def mostrar_biseccion():
             return
 
         # Desempaquetado de 5 valores
-        f_sym, x_sym, f_num, f_der_num, f_visual = datos
+        _, _, f_num, _, f_visual = datos
+
+        st.subheader("Función analizada:")
+        st.latex(f"f(x) = {f_visual}")
+
+        # Verificar existencia de Raiz
+        fa_init = evaluar_seguro(f_num, a)
+        fb_init = evaluar_seguro(f_num, b)
+
+        if fa_init is None or fb_init is None:
+            st.error("La función no se puede evaluar en el intervalo.")
+            return
+
+        st.subheader("Verificación de existencia de raíz")
+        st.latex(f"f(a) = f({a:.4f}) = {fa_init:.6f}")
+        st.latex(f"f(b) = f({b:.4f}) = {fb_init:.6f}")
+
+        if fa_init * fb_init > 0:
+            st.error("No hay cambio de signo en el intervalo. No existe una raiz")
+            return
+        else:
+            st.success(r"Existe al menos una raíz en el intervalo ($f(a) \cdot f(b) < 0$).")
         
         ok, msg, iteraciones = ejecutar_biseccion(f_num, a, b, tol)
 
@@ -38,22 +60,9 @@ def mostrar_biseccion():
             st.error(msg)
             return
 
-        st.subheader("Función analizada:")
-        st.latex(f"f(x) = {f_visual}")
-
         # --- PROCEDIMIENTO PASO A PASO ---
         st.subheader("Procedimiento Paso a Paso")
         with st.expander("Ver cálculos detallados", expanded=False):
-            st.markdown("### 1. Evaluación Inicial")
-            fa_init = float(f_num(a))
-            fb_init = float(f_num(b))
-            st.latex(f"f(a) = f({a:.4f}) = {fa_init:.6f}")
-            st.latex(f"f(b) = f({b:.4f}) = {fb_init:.6f}")
-            
-            if fa_init * fb_init > 0:
-                st.error("No hay cambio de signo en el intervalo inicial.")
-            else:
-                st.success("Cambio de signo detectado ($f(a) \cdot f(b) < 0$).")
 
             st.markdown("---")
             st.markdown("### 2. Desarrollo de Iteraciones")
@@ -65,7 +74,7 @@ def mostrar_biseccion():
                 fc = it['f(Ci)']
                 
                 st.write(f"#### Iteración {idx}")
-                st.latex(f"c_{{{idx}}} = \\frac{{{actual_a:.6f} + {actual_b:.6f}}}{{2}} = {c:.6f}")
+                st.latex(rf"c_{{{idx}}} = \frac{{{actual_a:.6f} + {actual_b:.6f}}}{{2}} = {c:.6f}")
                 st.latex(f"f(c_{{{idx}}}) = {fc:.6f}")
                 
                 if i < len(iteraciones) - 1:
@@ -79,8 +88,8 @@ def mostrar_biseccion():
         # Preparación de datos para tabla
         for it in iteraciones:
             it["Ci+1"] = it["Ci"]
-            it["f(a)"] = float(f_num(it["a"]))
-            it["f(b)"] = float(f_num(it["b"]))
+            it["f(a)"] = evaluar_seguro(f_num, it["a"])
+            it["f(b)"] = evaluar_seguro(f_num, it["b"])
 
         iteraciones_visibles = filtrar_iteraciones(iteraciones, tol)
         df = pd.DataFrame(iteraciones_visibles)
@@ -95,5 +104,5 @@ def mostrar_biseccion():
         fig = graficar_metodo_cerrado(f_num, iteraciones_visibles, "Convergencia: Bisección")
         st.pyplot(fig)
 
-        excel_bytes = exportar_excel_bytes(df, f_num, iteraciones_visibles)
+        excel_bytes = exportar_excel_biseccion(df, f_num, iteraciones_visibles)
         st.download_button(label="📊 Descargar Excel", data=excel_bytes, file_name="Biseccion.xlsx")

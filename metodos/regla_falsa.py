@@ -1,29 +1,36 @@
+from utils.evaluacion_segura import evaluar_seguro
+
 def ejecutar_regla_falsa(f, a, b, tol):
     iteraciones = []
     i = 0
     xr_viejo = 0
 
-    try:
-        f_a = float(f(a))
-        f_b = float(f(b))
-    except Exception as e:
-        return False, f"Error al evaluar la función: {e}", None
+    f_a = evaluar_seguro(f, a)
+    f_b = evaluar_seguro(f, b)
 
-    # Validación de Bolzano
+    if f_a is None or f_b is None:
+        return False, "No se puede evaluar la función en el intervalo.", None
+
+    # 🔹 Bolzano
     if f_a * f_b >= 0:
         return False, "f(a) y f(b) deben tener signos opuestos.", None
 
     while True:
-        # Fórmula de la Regla Falsa (Posición Falsa)
+        # 🔹 Fórmula regla falsa
         xr = b - (f_b * (a - b)) / (f_a - f_b)
-        f_xr = float(f(xr))
-        
+
+        f_xr = evaluar_seguro(f, xr)
+        if f_xr is None:
+            return False, "Error al evaluar la función durante las iteraciones.", None
+
         error = abs((xr - xr_viejo) / xr) * 100 if i > 0 else 100
-        
+
         iteraciones.append({
             "i": i,
             "a": a,
             "b": b,
+            "f(a)": f_a,
+            "f(b)": f_b,
             "Ci": xr,
             "f(Ci)": f_xr,
             "Error%": error
@@ -31,8 +38,7 @@ def ejecutar_regla_falsa(f, a, b, tol):
 
         if error < tol:
             break
-        
-        # Cambio de intervalo
+
         if f_a * f_xr < 0:
             b = xr
             f_b = f_xr
@@ -42,7 +48,7 @@ def ejecutar_regla_falsa(f, a, b, tol):
 
         xr_viejo = xr
         i += 1
-        
+
         if i > 100:
             return False, "El método no converge en 100 iteraciones.", None
 
