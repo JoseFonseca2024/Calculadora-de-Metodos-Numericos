@@ -27,7 +27,7 @@ def _configurar_grafica_base(f, iteraciones, incluir_prev=False, factor_margen=0
         try:
             y = f(x)
             y_vals.append(y if np.isfinite(y) else np.nan)
-        except:
+        except (ValueError, ZeroDivisionError, TypeError):
             y_vals.append(np.nan)
 
     ax.plot(x_vals, y_vals, linewidth=2, label="f(x)", zorder=2, color='royalblue')
@@ -73,7 +73,7 @@ def graficar_newton(f, iteraciones):
                     color='gray',
                     alpha=0.6
                 )
-        except:
+        except (ValueError, ZeroDivisionError, TypeError):
             pass
 
         # Etiqueta mejor posicionada
@@ -147,9 +147,8 @@ def graficar_secante(f, iteraciones):
                     color='gray',
                     alpha=0.5
                 )
-        except:
+        except (ValueError, ZeroDivisionError, TypeError):
             pass
-
         # Etiqueta
         ax.text(Ci, fCi, f'$x_{i}$', fontsize=9, ha='right', va='bottom')
 

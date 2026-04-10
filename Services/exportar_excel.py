@@ -6,107 +6,152 @@ from openpyxl.chart.shapes import GraphicalProperties
 from openpyxl.drawing.line import LineProperties
 from openpyxl.styles import Font
 
-def exportar_excel_bytes(df, f, iteraciones):
+def _configurar_grafica_base(ws, f, iteraciones, xmin_offset=1.5):
+    xs = [it["Ci"] for it in iteraciones] + [it["Ci+1"] for it in iteraciones]
+
+    xmin, xmax = min(xs), max(xs)
+
+    x_vals = np.linspace(xmin - xmin_offset, xmax + xmin_offset, 100)
+
+    ws["H1"], ws["I1"] = "x_curva", "f(x)"
+
+    for i, x in enumerate(x_vals, start=2):
+        ws.cell(row=i, column=8, value=float(x))
+
+        try:
+            y = f(x)
+            ws.cell(row=i, column=9, value=float(y) if np.isfinite(y) else None)
+        except (ValueError, TypeError, ZeroDivisionError):
+            ws.cell(row=i, column=9, value=None)
+
+    return len(x_vals) + 1, xmin, xmax
+
+def _crear_chart_base(xmin, xmax):
+    chart = ScatterChart()
+    chart.x_axis.title = "x"
+    chart.y_axis.title = "f(x)"
+    chart.legend.position = "b"
+
+    # Estilo ejes
+    def style_axis(axis):
+        line = LineProperties()
+        line.solidFill = "000000"
+        line.w = 20000
+        gp = GraphicalProperties()
+        gp.line = line
+        axis.graphicalProperties = gp
+
+    style_axis(chart.x_axis)
+    style_axis(chart.y_axis)
+
+    chart.x_axis.scaling.min = xmin - 0.5
+    chart.x_axis.scaling.max = xmax + 0.5
+
+    return chart
+
+def exportar_excel_newton(df, f, iteraciones):
     output = io.BytesIO()
+
     wb = Workbook()
     ws = wb.active
-    ws.title = "Newton_Raphson"
+    ws.title = "Newton"
 
-    # 1. TABLA DE DATOS PRINCIPAL
+    #Tabla
     headers = ['i', 'Ci', 'f(Ci)', "f'(Ci)", 'Ci+1', 'Error%']
     ws.append(headers)
+
     for row in df.itertuples(index=False):
         ws.append(list(row))
 
-    # 2. DATOS PARA LA CURVA f(x)
-    ws['H1'], ws['I1'] = "x_curva", "f(x)"
-    xs_puntos = [it["Ci"] for it in iteraciones] + [it["Ci+1"] for it in iteraciones]
-    xmin_map, xmax_map = min(xs_puntos), max(xs_puntos)
+    #Curva de la función
+    last_row, xmin, xmax = _configurar_grafica_base(ws, f, iteraciones)
 
-    x_vals = np.linspace(xmin_map - 1.5, xmax_map + 1.5, 100)
-    for idx, x in enumerate(x_vals, 2):
-        ws.cell(row=idx, column=8, value=float(x))
-        try:
-            y_val = f(x)
-            ws.cell(row=idx, column=9, value=float(y_val) if np.isfinite(y_val) else None)
-        except:
-            ws.cell(row=idx, column=9, value=None)
-    last_row_f = len(x_vals) + 1
+    #Tangentes
+    ws["K1"], ws["L1"] = "x_tang", "y_tang"
 
-    # 3. DATOS DE TANGENTES
-    ws['K1'], ws['L1'] = "x_tang", "y_tang"
-    row_t = 2
+    row = 2
     for it in iteraciones:
-        ws.cell(row=row_t, column=11, value=it["Ci"])
-        ws.cell(row=row_t, column=12, value=it["f(Ci)"])
-        ws.cell(row=row_t+1, column=11, value=it["Ci+1"])
-        ws.cell(row=row_t+1, column=12, value=0)
-        row_t += 3
+        ws.cell(row=row, column=11, value=it["Ci"])
+        ws.cell(row=row, column=12, value=it["f(Ci)"])
 
-    # 4. CONFIGURACIÓN DEL GRÁFICO
-    chart = ScatterChart()
-    chart.title = "Análisis Geométrico: Newton-Raphson"
-    chart.x_axis.title = "x"
-    chart.y_axis.title = "f(x)"
-    chart.legend.position = 'b'
+        ws.cell(row=row + 1, column=11, value=it["Ci+1"])
+        ws.cell(row=row + 1, column=12, value=0)
 
-    # --- REMARCAR EJES X e Y (Asignación manual segura) ---
-    def aplicar_formato_eje(eje):
-        linea = LineProperties()
-        linea.solidFill = "000000"
-        linea.w = 20000
-        props = GraphicalProperties()
-        props.line = linea
-        eje.graphicalProperties = props
+        row += 3
 
-    aplicar_formato_eje(chart.x_axis)
-    aplicar_formato_eje(chart.y_axis)
+    #Grafico
+    chart = _crear_chart_base(xmin, xmax)
+    chart.title = "Método Newton-Raphson"
 
-    # SERIE 1: Curva f(x) - AZUL
-    x_f_ref = Reference(ws, min_col=8, min_row=2, max_row=last_row_f)
-    y_f_ref = Reference(ws, min_col=9, min_row=2, max_row=last_row_f)
-    s_curva = Series(y_f_ref, x_f_ref, title="f(x)")
-    
-    linea_azul = LineProperties()
-    linea_azul.solidFill = "0000FF"
-    linea_azul.w = 25000
-    props_azul = GraphicalProperties()
-    props_azul.line = linea_azul
-    s_curva.graphicalProperties = props_azul
-    chart.series.append(s_curva)
+    # f(x)
+    x_ref = Reference(ws, min_col=8, min_row=2, max_row=last_row)
+    y_ref = Reference(ws, min_col=9, min_row=2, max_row=last_row)
+    serie = Series(y_ref, x_ref, title="f(x)")
+    chart.series.append(serie)
 
-    # SERIE 2: Tangentes - NARANJA PUNTEADO
-    x_t_ref = Reference(ws, min_col=11, min_row=2, max_row=row_t-1)
-    y_t_ref = Reference(ws, min_col=12, min_row=2, max_row=row_t-1)
-    s_tang = Series(y_t_ref, x_t_ref, title="Tangentes (Pasos)")
-    
-    linea_naranja = LineProperties()
-    linea_naranja.solidFill = "FF8C00"
-    linea_naranja.dashStyle = "sysDash" # Aquí estaba el error anterior
-    props_naranja = GraphicalProperties()
-    props_naranja.line = linea_naranja
-    s_tang.graphicalProperties = props_naranja
-    chart.series.append(s_tang)
+    # tangentes
+    x_t = Reference(ws, min_col=11, min_row=2, max_row=row - 1)
+    y_t = Reference(ws, min_col=12, min_row=2, max_row=row - 1)
+    serie_t = Series(y_t, x_t, title="Tangentes")
+    chart.series.append(serie_t)
 
-    # SERIE 3: Puntos de Iteración - ROJOS
-    x_p_ref = Reference(ws, min_col=2, min_row=2, max_row=len(iteraciones)+1)
-    y_p_ref = Reference(ws, min_col=3, min_row=2, max_row=len(iteraciones)+1)
-    s_puntos = Series(y_p_ref, x_p_ref, title="Puntos (Ci)")
-    
-    s_puntos.marker.symbol = "circle"
-    s_puntos.marker.size = 7
-    props_rojo = GraphicalProperties()
-    props_rojo.solidFill = "FF0000" 
-    s_puntos.marker.graphicalProperties = props_rojo
-    chart.series.append(s_puntos)
+    ws.add_chart(chart, "H15")
 
-    # 5. ESCALA Y ZOOM
-    chart.x_axis.scaling.min = xmin_map - 0.5
-    chart.x_axis.scaling.max = xmax_map + 0.5
-    f_vals = [abs(it["f(Ci)"]) for it in iteraciones]
-    f_max = max(f_vals) if f_vals else 10
-    chart.y_axis.scaling.min = -1
-    chart.y_axis.scaling.max = f_max + 1
+    for cell in ws[1]:
+        cell.font = Font(bold=True)
+
+    wb.save(output)
+    output.seek(0)
+    return output.getvalue()
+
+def exportar_excel_secante(df, f, iteraciones):
+    output = io.BytesIO()
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Secante"
+
+    #Tabla
+    headers = ['i', 'Ci-1', 'Ci', 'f(Ci-1)', 'f(Ci)', 'Ci+1', 'Error%']
+    ws.append(headers)
+
+    for row in df.itertuples(index=False):
+        ws.append(list(row))
+
+    #Curva
+    last_row, xmin, xmax = _configurar_grafica_base(ws, f, iteraciones)
+
+    #Secantes
+    ws["K1"], ws["L1"] = "x_sec", "y_sec"
+
+    row = 2
+    for it in iteraciones:
+        ws.cell(row=row, column=11, value=it["Ci-1"])
+        ws.cell(row=row, column=12, value=it["f(Ci-1)"])
+
+        ws.cell(row=row + 1, column=11, value=it["Ci"])
+        ws.cell(row=row + 1, column=12, value=it["f(Ci)"])
+
+        ws.cell(row=row + 2, column=11, value=it["Ci+1"])
+        ws.cell(row=row + 2, column=12, value=0)
+
+        row += 4
+
+    #Grafico
+    chart = _crear_chart_base(xmin, xmax)
+    chart.title = "Método de la Secante"
+
+    # f(x)
+    x_ref = Reference(ws, min_col=8, min_row=2, max_row=last_row)
+    y_ref = Reference(ws, min_col=9, min_row=2, max_row=last_row)
+    serie = Series(y_ref, x_ref, title="f(x)")
+    chart.series.append(serie)
+
+    # secantes
+    x_s = Reference(ws, min_col=11, min_row=2, max_row=row - 1)
+    y_s = Reference(ws, min_col=12, min_row=2, max_row=row - 1)
+    serie_s = Series(y_s, x_s, title="Secantes")
+    chart.series.append(serie_s)
 
     ws.add_chart(chart, "H15")
 

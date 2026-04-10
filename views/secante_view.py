@@ -7,6 +7,7 @@ from utils.funciones import validar_y_preparar_funcion
 from metodos.secante import ejecutar_secante
 from Services.procesamiento import filtrar_iteraciones
 from plot.graficas import graficar_secante
+from Services.exportar_excel import exportar_excel_secante
 
 def mostrar_secante():
     st.title("Metodo de la Secante")
@@ -78,4 +79,13 @@ def mostrar_secante():
         st.subheader("Grafica")
         fig = graficar_secante(f, iteraciones_visibles)
         st.pyplot(fig)
+
+        excel_bytes = exportar_excel_secante(df, f, iteraciones_visibles)
+
+        st.download_button(
+                label="📊 Descargar Excel con Gráfico Nativo",
+                data=excel_bytes,
+                file_name="Metodo_Secante.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
 

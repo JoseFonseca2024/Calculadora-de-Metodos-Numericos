@@ -7,7 +7,7 @@ from utils.formateo import fmt
 from metodos.newton_raphson import ejecutar_newton_raphson
 from Services.procesamiento import filtrar_iteraciones
 from plot.graficas import graficar_newton
-from Services.exportar_excel import exportar_excel_bytes
+from Services.exportar_excel import exportar_excel_newton
 
 def mostrar_newton_raphson():
     st.title("Metodo Newton-Raphson")
@@ -78,12 +78,12 @@ def mostrar_newton_raphson():
         fig = graficar_newton(f, iteraciones_visibles)
         st.pyplot(fig)
 
-        excel_bytes = exportar_excel_bytes(df, f, iteraciones_visibles)
+        excel_bytes = exportar_excel_newton(df, f, iteraciones_visibles)
 
         st.download_button(
                 label="📊 Descargar Excel con Gráfico Nativo",
                 data=excel_bytes,
-                file_name="Newton_Raphson_Completo.xlsx",
+                file_name="Metodo_Newton_Raphson.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
     

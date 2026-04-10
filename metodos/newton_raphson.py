@@ -16,13 +16,10 @@ def ejecutar_newton_raphson(f, f_deriv, C0, tol):
 
             Ci_next = Ci - (f_Ci / f_deriv_Ci)
 
-            if i == 0:
-                error = None
+            if abs(Ci_next) < 1e-12:
+                error = 0
             else:
-                if abs(Ci_next) < 1e-12:
-                    error = 0
-                else:
-                    error = abs((Ci_next - Ci) / Ci_next) * 100
+                error = abs((Ci_next - Ci) / Ci_next) * 100
 
             iteraciones.append({
                 "i": i,
