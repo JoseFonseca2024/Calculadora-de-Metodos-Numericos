@@ -1,6 +1,8 @@
 import streamlit as st
 
 from views.inicio_view import mostrarInicio
+from views.biseccion_view import mostrar_biseccion
+from views.regla_falsa_view import mostrar_regla_falsa
 from views.newton_raphson_view import mostrar_newton_raphson
 from views.secante_view import mostrar_secante
 
@@ -43,3 +45,10 @@ elif st.session_state.metodo == "Newton-Raphson":
 
 elif st.session_state.metodo == "Secante":
     mostrar_secante()
+
+# ESTO ES LO QUE DEBES AGREGAR:
+elif st.session_state.metodo == "Bisección":
+    mostrar_biseccion()
+
+elif st.session_state.metodo == "Regla Falsa":
+    mostrar_regla_falsa()

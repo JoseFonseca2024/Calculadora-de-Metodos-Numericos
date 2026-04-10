@@ -1,91 +1,60 @@
 import streamlit as st
 import sympy as sp
 import pandas as pd
-
-from utils.formateo import fmt
 from utils.funciones import validar_y_preparar_funcion
+from utils.formateo import fmt
 from metodos.secante import ejecutar_secante
 from Services.procesamiento import filtrar_iteraciones
 from plot.graficas import graficar_secante
-from Services.exportar_excel import exportar_excel_secante
+from Services.exportar_excel import exportar_excel_newton as exportar_excel_bytes
 
 def mostrar_secante():
-    st.title("Metodo de la Secante")
-        
-    funcion_str = st.text_input(
-        "Introduzca una función f(x):",
-        placeholder="Ej: x² - 4x - 12"
-    )
-
-    C0 = st.number_input("Valor inicial (C₀):", value=0.0, format="%.6f")
-
-    C_1 = st.number_input("Valor inicial (C-₁):", value=0.0, format="%.6f")
-
-    tol = st.number_input("Tolerancia (%)", value=0.01, format="%.6f")
+    st.title("Método de la Secante")
+    
+    funcion_str = st.text_input("Introduzca f(x):", placeholder="Ej: x^2 - 4")
+    col1, col2 = st.columns(2)
+    with col1: x0 = st.number_input("x0:", value=0.0, format="%.6f")
+    with col2: x1 = st.number_input("x-1:", value=1.0, format="%.6f")
+    tol = st.number_input("Tolerancia (%)", value=0.0001, format="%.6f")
 
     if st.button("Calcular"):
-
-        valido, error, datos = validar_y_preparar_funcion(funcion_str)
-
+        valido, error_msg, datos = validar_y_preparar_funcion(funcion_str)
         if not valido:
-            st.error(error)
-            return
-        
-        funcion, _, f, _ = datos
+            st.error(error_msg); return
 
-        st.subheader("Función insertada:")
-        st.latex(sp.latex(funcion))
-
-        ok, msg, iteraciones = ejecutar_secante(f, C0, C_1, tol)
+        f_sym, x_sym, f_num, f_der_num, f_visual = datos
+        ok, msg, iteraciones = ejecutar_secante(f_num, x0, x1, tol)
 
         if not ok:
-            st.error(msg)
-            return
-        
+            st.error(msg); return
+
+        st.subheader("Función:")
+        st.latex(f"f(x) = {f_visual}")
+
+        # --- PROCEDIMIENTO PASO A PASO ---
+        with st.expander("Ver procedimiento detallado", expanded=False):
+            for it in iteraciones:
+                idx = it.get('i', it.get('iter', 0))
+                x_act = it.get('xn', it.get('Ci', 0))
+                x_prev = it.get('xn-1', it.get('Ci-1', 0))
+                x_sig = it.get('xn+1', it.get('Ci+1', 0))
+                st.write(f"**Iteración {idx}:**")
+                st.latex(f"x_{{{idx+1}}} = {x_act:.6f} - \\frac{{f({x_act:.6f})({x_prev:.6f} - {x_act:.6f})}}{{f({x_prev:.6f}) - f({x_act:.6f})}} = {x_sig:.6f}")
+
+        # Mapeo seguro para evitar KeyError
+        for it in iteraciones:
+            it["Ci-1"] = it.get('xn-1', it.get('Ci-1', 0))
+            it["Ci"] = it.get('xn', it.get('Ci', 0))
+            it["Ci+1"] = it.get('xn+1', it.get('Ci+1', 0))
+            it["f(Ci)"] = float(f_num(it["Ci"]))
+            it["f(Ci-1)"] = float(f_num(it["Ci-1"]))
+
         iteraciones_visibles = filtrar_iteraciones(iteraciones, tol)
+        st.subheader("Tabla de Iteraciones")
+        st.dataframe(pd.DataFrame(iteraciones_visibles))
 
-        # Paso a paso
-        st.subheader("Cálculo paso a paso")
-        for it in iteraciones_visibles:
-            Ci = fmt(it["Ci"])
-            Ci_1 = fmt(it["Ci-1"])
-            fCi = fmt(it["f(Ci)"])
-            fCi_1 = fmt(it["f(Ci-1)"])
-            Ci_next = fmt(it["Ci+1"])
-
-            st.latex(
-                fr"C_{{{it['i']+1}}} = {Ci} - \frac{{{fCi}({Ci} - {Ci_1})}}{{{fCi} - {fCi_1}}} = {Ci_next}"
-            )
-        # Tabla
-        st.subheader("Tabla")
-        df = pd.DataFrame(iteraciones_visibles)
-
-        st.dataframe(
-            df.style.format({
-                "Ci": fmt,
-                "Ci-1": fmt,
-                "f(Ci)": fmt,
-                "f(Ci-1)": fmt,
-                "Ci+1": fmt,
-                "Error%": fmt
-            })
-        )
-
-        # Resultado
-        raiz = iteraciones_visibles[-1]["Ci+1"]
-        st.success(f"Raíz aproximada: {raiz:.6f}")
-
-        #Grafica
-        st.subheader("Grafica")
-        fig = graficar_secante(f, iteraciones_visibles)
-        st.pyplot(fig)
-
-        excel_bytes = exportar_excel_secante(df, f, iteraciones_visibles)
-
-        st.download_button(
-                label="📊 Descargar Excel con Gráfico Nativo",
-                data=excel_bytes,
-                file_name="Metodo_Secante.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        )
-
+        st.success(f"Raíz aproximada: {iteraciones_visibles[-1]['Ci+1']:.6f}")
+        st.pyplot(graficar_secante(f_num, iteraciones_visibles))
+        
+        excel_bytes = exportar_excel_bytes(pd.DataFrame(iteraciones_visibles), f_num, iteraciones_visibles)
+        st.download_button(label="📊 Descargar Excel", data=excel_bytes, file_name="Secante.xlsx")

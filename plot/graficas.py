@@ -179,3 +179,48 @@ def graficar_secante(f, iteraciones):
     ax.legend()
 
     return fig
+
+def graficar_metodo_cerrado(f, iteraciones, titulo):
+   
+    iter_adaptadas = []
+    for it in iteraciones:
+        iter_adaptadas.append({
+            "Ci": it["a"], 
+            "Ci+1": it["b"]
+        })
+
+    fig, ax, xmin_real, xmax_real, margen_x = _configurar_grafica_base(
+        f, iter_adaptadas, factor_margen=0.6
+    )
+
+    # 2. Dibujar el intervalo final (el más preciso)
+    a_final = iteraciones[-1]["a"]
+    b_final = iteraciones[-1]["b"]
+    raiz = iteraciones[-1]["Ci"]
+
+    # Sombreado del intervalo final
+    ax.axvspan(a_final, b_final, color='green', alpha=0.1, label='Intervalo Final')
+    
+    # Líneas verticales de los límites
+    ax.axvline(a_final, color='green', linestyle='--', alpha=0.6, label='Límite a')
+    ax.axvline(b_final, color='orange', linestyle='--', alpha=0.6, label='Límite b')
+
+    # Marca la raíz 
+    ax.scatter(
+        raiz, 0,
+        marker='*',
+        s=200,
+        color='gold',
+        edgecolor='orange',
+        label=f"Raíz aprox: {raiz:.4f}",
+        zorder=10
+    )
+
+    # Ajustes finales de ejes
+    ax.set_title(titulo)
+    ax.set_xlabel("x")
+    ax.set_ylabel("f(x)")
+    ax.grid(True, linestyle='--', alpha=0.3)
+    ax.legend()
+
+    return fig
