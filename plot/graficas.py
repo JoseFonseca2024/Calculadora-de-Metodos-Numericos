@@ -180,6 +180,56 @@ def graficar_secante(f, iteraciones):
 
     return fig
 
+def graficar_punto_fijo(gs, x_min, x_max):
+
+    fig, ax = plt.subplots(figsize=(8,8))
+
+    x_vals = np.linspace(x_min, x_max, 500)
+
+    # Línea y=x
+    ax.plot(
+        x_vals,
+        x_vals,
+        '--',
+        linewidth=2,
+        label='y = x'
+    )
+
+    # Graficar todas las g(x)
+    for g_data in gs:
+
+        try:
+
+            g_num = g_data["num"]
+
+            y_vals = []
+
+            for x in x_vals:
+
+                try:
+                    y_vals.append(g_num(x))
+                except:
+                    y_vals.append(np.nan)
+
+            ax.plot(
+                x_vals,
+                y_vals,
+                linewidth=2,
+                label=g_data["nombre"]
+            )
+
+        except:
+            continue
+
+    ax.grid()
+    ax.legend()
+
+    ax.set_title("Funciones g(x) del Método de Punto Fijo")
+    ax.set_xlabel("x")
+    ax.set_ylabel("g(x)")
+
+    return fig
+
 def graficar_metodo_cerrado(f, iteraciones, titulo):
    
     iter_adaptadas = []

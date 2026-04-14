@@ -5,6 +5,7 @@ from views.biseccion_view import mostrar_biseccion
 from views.regla_falsa_view import mostrar_regla_falsa
 from views.newton_raphson_view import mostrar_newton_raphson
 from views.secante_view import mostrar_secante
+from views.punto_fijo_view import mostrar_punto_fijo
 
 st.set_page_config(
     page_title="Calculadora de Métodos Numéricos",
@@ -35,6 +36,8 @@ with st.sidebar.expander("Raíces de ecuaciones no lineales", expanded=True):
         st.session_state.metodo = "Newton-Raphson"
     if st.button("Secante"):
         st.session_state.metodo = "Secante"
+    if st.button("Punto Fijo"):
+        st.session_state.metodo = "Punto Fijo"
 
 # Mostrar contenido
 if st.session_state.metodo is None:
@@ -52,3 +55,5 @@ elif st.session_state.metodo == "Bisección":
 
 elif st.session_state.metodo == "Regla Falsa":
     mostrar_regla_falsa()
+elif st.session_state.metodo == "Punto Fijo":
+    mostrar_punto_fijo()

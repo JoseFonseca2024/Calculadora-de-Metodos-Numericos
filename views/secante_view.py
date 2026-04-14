@@ -4,16 +4,16 @@ from utils.funciones import validar_y_preparar_funcion
 from metodos.secante import ejecutar_secante
 from Services.procesamiento import filtrar_iteraciones
 from plot.graficas import graficar_secante
-from Services.exportar_excel import exportar_excel_newton as exportar_excel_bytes
+from Services.exportar_excel import exportar_excel_secante
 
 def mostrar_secante():
     st.title("Método de la Secante")
     
     funcion_str = st.text_input("Introduzca f(x):", placeholder="Ej: x^2 - 4")
     col1, col2 = st.columns(2)
-    with col1: x0 = st.number_input("C₀:", value=0.0, format="%.6f")
-    with col2: x1 = st.number_input("C₋₁", value=1.0, format="%.6f")
-    tol = st.number_input("Tolerancia (%)", value=0.0001, format="%.6f")
+    with col1: x0 = st.number_input("C₀:", value=0.0, format="%.8f")
+    with col2: x1 = st.number_input("C₋₁", value=1.0, format="%.8f")
+    tol = st.number_input("Tolerancia (%)", value=0.0001, format="%.8f")
 
     if st.button("Calcular"):
         valido, error_msg, datos = validar_y_preparar_funcion(funcion_str)
@@ -37,7 +37,7 @@ def mostrar_secante():
                 x_prev = it.get('xn-1', it.get('Ci-1', 0))
                 x_sig = it.get('xn+1', it.get('Ci+1', 0))
                 st.write(f"**Iteración {idx}:**")
-                st.latex(f"x_{{{idx+1}}} = {x_act:.6f} - \\frac{{f({x_act:.6f})({x_prev:.6f} - {x_act:.6f})}}{{f({x_prev:.6f}) - f({x_act:.6f})}} = {x_sig:.6f}")
+                st.latex(f"x_{{{idx+1}}} = {x_act:.8f} - \\frac{{f({x_act:.8f})({x_prev:.8f} - {x_act:.8f})}}{{f({x_prev:.8f}) - f({x_act:.8f})}} = {x_sig:.8f}")
 
         # Mapeo seguro para evitar KeyError
         for it in iteraciones:
@@ -51,8 +51,8 @@ def mostrar_secante():
         st.subheader("Tabla de Iteraciones")
         st.dataframe(pd.DataFrame(iteraciones_visibles))
 
-        st.success(f"Raíz aproximada: {iteraciones_visibles[-1]['Ci+1']:.6f}")
+        st.success(f"Raíz aproximada: {iteraciones_visibles[-1]['Ci+1']:.8f}")
         st.pyplot(graficar_secante(f_num, iteraciones_visibles))
         
-        excel_bytes = exportar_excel_bytes(pd.DataFrame(iteraciones_visibles), f_num, iteraciones_visibles)
+        excel_bytes = exportar_excel_secante(pd.DataFrame(iteraciones_visibles), f_num, iteraciones_visibles)
         st.download_button(label="📊 Descargar Excel", data=excel_bytes, file_name="Secante.xlsx")

@@ -23,11 +23,11 @@ def mostrar_regla_falsa():
 
     col1, col2 = st.columns(2)
     with col1:
-        a = st.number_input("Límite inferior (a):", value=0.0, format="%.6f")
+        a = st.number_input("Límite inferior (a):", value=0.0, format="%.8f")
     with col2:
-        b = st.number_input("Límite superior (b):", value=1.0, format="%.6f")
+        b = st.number_input("Límite superior (b):", value=1.0, format="%.8f")
 
-    tol = st.number_input("Tolerancia (%)", value=0.0001, format="%.6f")
+    tol = st.number_input("Tolerancia (%)", value=0.0001, format="%.8f")
 
     if st.button("Calcular"):
 
@@ -56,8 +56,8 @@ def mostrar_regla_falsa():
             return
 
         st.subheader("Verificación de existencia de raíz")
-        st.latex(f"f(a) = f({a:.4f}) = {fa_init:.6f}")
-        st.latex(f"f(b) = f({b:.4f}) = {fb_init:.6f}")
+        st.latex(f"f(a) = f({a:.4f}) = {fa_init:.8f}")
+        st.latex(f"f(b) = f({b:.4f}) = {fb_init:.8f}")
 
         if fa_init * fb_init > 0:
             st.error("No hay cambio de signo en el intervalo.")
@@ -80,16 +80,16 @@ def mostrar_regla_falsa():
                 st.write(f"#### Iteración {it['i']}")
 
                 st.latex(
-                    rf"c_{{{it['i']}}} = {it['b']:.6f} - "
-                    rf"\frac{{({it['f(b)']:.6f})({it['a']:.6f} - {it['b']:.6f})}}"
-                    rf"{{({it['f(a)']:.6f}) - ({it['f(b)']:.6f})}}"
+                    rf"c_{{{it['i']}}} = {it['b']:.8f} - "
+                    rf"\frac{{({it['f(b)']:.8f})({it['a']:.8f} - {it['b']:.8f})}}"
+                    rf"{{({it['f(a)']:.8f}) - ({it['f(b)']:.8f})}}"
                 )
 
-                st.latex(rf"c_{{{it['i']}}} = {it['Ci']:.6f}")
-                st.latex(rf"f(c_{{{it['i']}}}) = {it['f(Ci)']:.6f}")
+                st.latex(rf"c_{{{it['i']}}} = {it['Ci']:.8f}")
+                st.latex(rf"f(c_{{{it['i']}}}) = {it['f(Ci)']:.8f}")
 
                 if it["Error%"] is not None:
-                    st.latex(rf"Error = {it['Error%']:.6f}\%")
+                    st.latex(rf"Error = {it['Error%']:.8f}\%")
 
                 st.markdown("---")
 
@@ -114,7 +114,7 @@ def mostrar_regla_falsa():
         }))
 
         # 🔹 6. Resultado
-        st.success(f"Raíz aproximada: {iteraciones_visibles[-1]['Ci']:.6f}")
+        st.success(f"Raíz aproximada: {iteraciones_visibles[-1]['Ci']:.8f}")
 
         # 🔹 7. Gráfica
         st.subheader("Visualización del Método")

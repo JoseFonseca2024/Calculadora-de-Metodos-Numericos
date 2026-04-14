@@ -11,8 +11,8 @@ def mostrar_newton_raphson():
     st.title("Método de Newton-Raphson")
     
     funcion_str = st.text_input("Introduzca una función f(x):", placeholder="Ej: x^3 - x - 1")
-    x0 = st.number_input("Punto inicial (C₀):", value=0.0, format="%.6f")
-    tol = st.number_input("Tolerancia (%)", value=0.0001, format="%.6f")
+    x0 = st.number_input("Punto inicial (C₀):", value=0.0, format="%.8f")
+    tol = st.number_input("Tolerancia (%)", value=0.0001, format="%.8f")
 
     if st.button("Calcular"):
         valido, error_msg, datos = validar_y_preparar_funcion(funcion_str)
@@ -29,15 +29,13 @@ def mostrar_newton_raphson():
         st.latex(f"f(x) = {f_visual}")
         st.latex(f"f'(x) = {sp.latex(sp.diff(f_sym, x_sym))}")
 
-        # --- PROCEDIMIENTO (QUE NO DEBÍ QUITARTE) ---
         with st.expander("Ver procedimiento paso a paso", expanded=False):
             for it in iteraciones:
                 idx = it.get('i', it.get('iter', 0))
-                # Intentamos obtener xn y xn+1 sea cual sea el nombre que use tu metodo
                 actual = it.get('xn', it.get('Ci', 0))
                 siguiente = it.get('xn+1', it.get('Ci+1', 0))
                 st.write(f"**Iteración {idx}:**")
-                st.latex(f"x_{{{idx+1}}} = {actual:.6f} - \\frac{{f({actual:.6f})}}{{f'({actual:.6f})}} = {siguiente:.6f}")
+                st.latex(f"x_{{{idx+1}}} = {actual:.8f} - \\frac{{f({actual:.8f})}}{{f'({actual:.8f})}} = {siguiente:.8f}")
 
         # Mapeo seguro para la gráfica
         for it in iteraciones:
@@ -49,7 +47,7 @@ def mostrar_newton_raphson():
         st.subheader("Tabla de Iteraciones")
         st.dataframe(pd.DataFrame(iteraciones_visibles))
 
-        st.success(f"Raíz aproximada: {iteraciones_visibles[-1]['Ci+1']:.6f}")
+        st.success(f"Raíz aproximada: {iteraciones_visibles[-1]['Ci+1']:.8f}")
         st.pyplot(graficar_newton(f_num, iteraciones_visibles))
         
         excel_bytes = exportar_excel_bytes(pd.DataFrame(iteraciones_visibles), f_num, iteraciones_visibles)

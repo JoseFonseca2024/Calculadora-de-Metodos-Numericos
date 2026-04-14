@@ -17,11 +17,11 @@ def mostrar_biseccion():
     
     col1, col2 = st.columns(2)
     with col1:
-        a = st.number_input("Límite inferior (a):", value=0.0, format="%.6f", key="bis_a")
+        a = st.number_input("Límite inferior (a):", value=0.0, format="%.8f", key="bis_a")
     with col2:
-        b = st.number_input("Límite superior (b):", value=1.0, format="%.6f", key="bis_b")
+        b = st.number_input("Límite superior (b):", value=1.0, format="%.8f", key="bis_b")
         
-    tol = st.number_input("Tolerancia (%)", value=0.0001, format="%.6f", key="bis_tol")
+    tol = st.number_input("Tolerancia (%)", value=0.0001, format="%.8f", key="bis_tol")
 
     if st.button("Calcular"):
         valido, error_msg, datos = validar_y_preparar_funcion(funcion_str)
@@ -45,8 +45,8 @@ def mostrar_biseccion():
             return
 
         st.subheader("Verificación de existencia de raíz")
-        st.latex(f"f(a) = f({a:.4f}) = {fa_init:.6f}")
-        st.latex(f"f(b) = f({b:.4f}) = {fb_init:.6f}")
+        st.latex(f"f(a) = f({a:.4f}) = {fa_init:.8f}")
+        st.latex(f"f(b) = f({b:.4f}) = {fb_init:.8f}")
 
         if fa_init * fb_init > 0:
             st.error("No hay cambio de signo en el intervalo. No existe una raiz")
@@ -74,15 +74,15 @@ def mostrar_biseccion():
                 fc = it['f(Ci)']
                 
                 st.write(f"#### Iteración {idx}")
-                st.latex(rf"c_{{{idx}}} = \frac{{{actual_a:.6f} + {actual_b:.6f}}}{{2}} = {c:.6f}")
-                st.latex(f"f(c_{{{idx}}}) = {fc:.6f}")
+                st.latex(rf"c_{{{idx}}} = \frac{{{actual_a:.8f} + {actual_b:.8f}}}{{2}} = {c:.8f}")
+                st.latex(f"f(c_{{{idx}}}) = {fc:.8f}")
                 
                 if i < len(iteraciones) - 1:
                     proxima = iteraciones[i+1]
                     if proxima['a'] == c:
-                        st.info(f"Como $f(a) \cdot f(c) > 0$, la raíz está en $[c, b]$. Nuevo intervalo: $[{proxima['a']:.6f}, {proxima['b']:.6f}]$")
+                        st.info(f"Como $f(a) \cdot f(c) > 0$, la raíz está en $[c, b]$. Nuevo intervalo: $[{proxima['a']:.8f}, {proxima['b']:.8f}]$")
                     else:
-                        st.info(f"Como $f(a) \cdot f(c) < 0$, la raíz está en $[a, c]$. Nuevo intervalo: $[{proxima['a']:.6f}, {proxima['b']:.6f}]$")
+                        st.info(f"Como $f(a) \cdot f(c) < 0$, la raíz está en $[a, c]$. Nuevo intervalo: $[{proxima['a']:.8f}, {proxima['b']:.8f}]$")
                 st.markdown("---")
 
         # Preparación de datos para tabla
@@ -97,7 +97,7 @@ def mostrar_biseccion():
         st.subheader("Tabla de Iteraciones")
         st.dataframe(df.style.format(fmt))
 
-        st.success(f"Raíz aproximada: {iteraciones_visibles[-1]['Ci']:.6f}")
+        st.success(f"Raíz aproximada: {iteraciones_visibles[-1]['Ci']:.8f}")
 
         # Gráfica
         st.subheader("Visualización del Método")
