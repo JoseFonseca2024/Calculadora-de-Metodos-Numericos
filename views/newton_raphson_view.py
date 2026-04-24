@@ -17,26 +17,66 @@ def mostrar_newton_raphson():
     if st.button("Calcular"):
         valido, error_msg, datos = validar_y_preparar_funcion(funcion_str)
         if not valido:
-            st.error(error_msg); return
+            st.error(error_msg)
+            return
 
         f_sym, x_sym, f_num, f_der_num, f_visual = datos
         ok, msg, iteraciones = ejecutar_newton_raphson(f_num, f_der_num, x0, tol)
 
         if not ok:
-            st.error(msg); return
+            st.error(msg)
+            return
 
         st.subheader("Análisis de la Función:")
         st.latex(f"f(x) = {f_visual}")
         st.latex(f"f'(x) = {sp.latex(sp.diff(f_sym, x_sym))}")
 
+
+        f_der_sym = sp.diff(f_sym, x_sym)
+
         with st.expander("Ver procedimiento paso a paso", expanded=False):
+
+            f_der_sym = sp.diff(f_sym, x_sym)
+            f_der_latex = sp.latex(f_der_sym)
+
             for it in iteraciones:
                 idx = it.get('i', it.get('iter', 0))
                 actual = it.get('xn', it.get('Ci', 0))
                 siguiente = it.get('xn+1', it.get('Ci+1', 0))
-                st.write(f"**Iteración {idx}:**")
-                st.latex(f"x_{{{idx+1}}} = {actual:.8f} - \\frac{{f({actual:.8f})}}{{f'({actual:.8f})}} = {siguiente:.8f}")
 
+                fx = f_num(actual)
+                fpx = f_der_num(actual)
+
+                valor_latex = f"({actual:.4f})"
+
+                st.write(f"**Iteración {idx}:**")
+
+                # 🔹 Forma general
+                st.latex(
+                    f"x_{{{idx+1}}} = {actual:.8f} - "
+                    f"\\frac{{f({actual:.8f})}}{{f'({actual:.8f})}}"
+                )
+
+                # 🔹 Sustitución en f(x)
+                f_latex = sp.latex(f_sym)
+                f_sust_latex = f_latex.replace("x", valor_latex)
+                st.latex(f"f({actual:.4f}) = {f_sust_latex}")
+
+                # 🔹 Resultado f(x)
+                st.latex(f"f({actual:.4f}) = {fx:.8f}")
+
+                # 🔹 Sustitución en f'(x)
+                f_der_sust_latex = f_der_latex.replace("x", valor_latex)
+                st.latex(f"f'({actual:.4f}) = {f_der_sust_latex}")
+
+                # 🔹 Resultado derivada
+                st.latex(f"f'({actual:.4f}) = {fpx:.8f}")
+
+                # 🔹 Newton
+                st.latex(
+                    f"x_{{{idx+1}}} = {actual:.8f} - "
+                    f"\\frac{{{fx:.8f}}}{{{fpx:.8f}}} = {siguiente:.8f}"
+                )        
         # Mapeo seguro para la gráfica
         for it in iteraciones:
             it["Ci"] = it.get('xn', it.get('Ci', 0))
@@ -50,5 +90,13 @@ def mostrar_newton_raphson():
         st.success(f"Raíz aproximada: {iteraciones_visibles[-1]['Ci+1']:.8f}")
         st.pyplot(graficar_newton(f_num, iteraciones_visibles))
         
-        excel_bytes = exportar_excel_bytes(pd.DataFrame(iteraciones_visibles), f_num, iteraciones_visibles)
-        st.download_button(label="📊 Descargar Excel", data=excel_bytes, file_name="Newton.xlsx")
+        excel_bytes = exportar_excel_bytes(
+            pd.DataFrame(iteraciones_visibles),
+            f_num,
+            iteraciones_visibles
+        )
+        st.download_button(
+            label="📊 Descargar Excel",
+            data=excel_bytes,
+            file_name="Newton.xlsx"
+        )
