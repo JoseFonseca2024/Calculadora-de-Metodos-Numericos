@@ -6,6 +6,7 @@ from views.regla_falsa_view import mostrar_regla_falsa
 from views.newton_raphson_view import mostrar_newton_raphson
 from views.secante_view import mostrar_secante
 from views.punto_fijo_view import mostrar_punto_fijo
+from views.bairstow_view import mostrar_bairstow
 
 st.set_page_config(
     page_title="Calculadora de Métodos Numéricos",
@@ -39,6 +40,10 @@ with st.sidebar.expander("Raíces de ecuaciones no lineales", expanded=True):
     if st.button("Punto Fijo"):
         st.session_state.metodo = "Punto Fijo"
 
+with st.sidebar.expander("Raices de un polinomio", expanded=True):
+    if st.button("Metodo de Bairstow", key = "btnBairstow"):
+        st.session_state.metodo = "Bairstow"
+
 # Mostrar contenido
 if st.session_state.metodo is None:
     mostrarInicio()
@@ -57,3 +62,5 @@ elif st.session_state.metodo == "Regla Falsa":
     mostrar_regla_falsa()
 elif st.session_state.metodo == "Punto Fijo":
     mostrar_punto_fijo()
+elif st.session_state.metodo == "Bairstow":
+    mostrar_bairstow()

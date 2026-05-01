@@ -8,6 +8,9 @@ from sympy.parsing.sympy_parser import (
 def validar_y_preparar_funcion(funcion_str):
     if not funcion_str or not funcion_str.strip():
         return False, "Debe ingresar una expresión.", None
+    
+    if "=" in funcion_str:
+        return False, "Formato incorrecto: ingrese solo la función sin ninguna igualdad.", None
     try:
         texto_original = funcion_str.replace(" ", "")
 
@@ -55,6 +58,7 @@ def validar_y_preparar_funcion(funcion_str):
 
         # ∛x
         f_prep = re.sub(r'∛([a-zA-Z0-9]+)', r'(\1)**(1/3)', f_prep)
+
 
         # 🔹 Transformaciones
         transformaciones = standard_transformations + (
