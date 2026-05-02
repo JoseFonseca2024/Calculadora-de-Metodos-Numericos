@@ -274,3 +274,38 @@ def graficar_metodo_cerrado(f, iteraciones, titulo):
     ax.legend()
 
     return fig
+
+def graficar_taylor(f_num, poly_num, x_eval, a, titulo="Aproximación de Taylor"):
+    # Determinamos el rango de visualización basado en el punto 'a' y donde evaluamos
+    puntos = [a, x_eval]
+    centro = sum(puntos) / 2
+    rango = max(abs(x_eval - a) * 2, 4.0)
+    
+    x_vals = np.linspace(centro - rango, centro + rango, 500)
+    
+    fig, ax = plt.subplots(figsize=(10, 6))
+    
+    # 1. Función Original
+    y_f = [f_num(val) for val in x_vals]
+    ax.plot(x_vals, y_f, label="f(x) Original", color='royalblue', linewidth=2.5)
+    
+    # 2. Polinomio de Taylor
+    y_p = [poly_num(val) for val in x_vals]
+    ax.plot(x_vals, y_p, label="Polinomio de Taylor", color='red', linestyle='--', linewidth=2)
+    
+    # Puntos de interés
+    ax.scatter(a, f_num(a), color='black', s=50, label=f"Centro a={a}", zorder=5)
+    ax.scatter(x_eval, poly_num(x_eval), color='orange', marker='X', s=100, label="Punto evaluado", zorder=5)
+
+    ax.axhline(0, color='black', linewidth=1)
+    ax.axvline(0, color='black', linewidth=1)
+    ax.set_title(titulo)
+    ax.legend()
+    ax.grid(True, alpha=0.3)
+    
+    # Limitar eje Y para evitar que crezca al infinito si el polinomio diverge
+    y_lims = [val for val in y_f if np.isfinite(val)]
+    if y_lims:
+        ax.set_ylim(min(y_lims) - 2, max(y_lims) + 2)
+        
+    return fig

@@ -1,210 +1,118 @@
 import io
+import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
 from openpyxl import Workbook
-from openpyxl.drawing.image import Image
-from openpyxl.styles import Font
+from openpyxl.utils.dataframe import dataframe_to_rows
+from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 
+def procesar_fila_compleja(fila):
+    """Procesa la fila para separar resultados y errores en columnas distintas."""
+    nueva_fila = []
+    for celda in fila:
+        # Limpieza de Tuplas (Intervalos)
+        if isinstance(celda, tuple):
+            nueva_fila.append(f"[{celda[0]:.4f}, {celda[1]:.4f}]")
+        
+        # Limpieza de Listas (Iteraciones) -> Separar en 2 valores
+        elif isinstance(celda, list) and len(celda) > 0 and isinstance(celda[-1], dict):
+            ult = celda[-1]
+            res = ult.get('raiz') or ult.get('Ci+1') or ult.get('x_nuevo') or 0
+            err = ult.get('Error%') or ult.get('error') or 0
+            nueva_fila.append(round(float(res), 6))
+            nueva_fila.append(f"{err:.4e}")
+            
+        # Limpieza de Números
+        elif isinstance(celda, (float, np.float64, np.float32)):
+            nueva_fila.append(round(float(celda), 8))
+        else:
+            nueva_fila.append(celda)
+    return nueva_fila
 
-# GENERADOR DE GRÁFICA (BASE PARA TODOS)
-def generar_grafico(f, iteraciones, metodo="Método"):
-    xs = [it["Ci"] for it in iteraciones if "Ci" in it]
-    xs += [it["Ci+1"] for it in iteraciones if "Ci+1" in it]
-
-    xmin, xmax = min(xs), max(xs)
-    x = np.linspace(xmin - 2, xmax + 2, 400)
-
-    y = []
-    for val in x:
-        try:
-            y_val = f(val)
-            y.append(y_val if np.isfinite(y_val) else None)
-        except:
-            y.append(None)
-
-    plt.figure()
-
-    # 🔥 ejes tipo plano cartesiano
-    plt.axhline(0)
-    plt.axvline(0)
-
-    # 🔥 función
-    plt.plot(x, y, label="f(x)")
-
-    # 🔥 puntos Ci + etiquetas
-    for i, it in enumerate(iteraciones):
-        if "Ci" in it and "f(Ci)" in it:
-            xi = it["Ci"]
-            yi = it["f(Ci)"]
-
-            plt.scatter(xi, yi)
-            plt.text(xi, yi, f"C{i}", fontsize=8)
-
-    # 🔥 raíz final
-    ultima = iteraciones[-1]
-
-    if "Ci+1" in ultima:
-        raiz = ultima["Ci+1"]
-    else:
-        raiz = ultima["Ci"]
-
-    try:
-        y_raiz = f(raiz)
-    except:
-        y_raiz = 0
-
-    # punto raíz destacado
-    plt.scatter(raiz, y_raiz, marker='x', s=100)
-    plt.text(raiz, y_raiz, f"Raíz ≈ {raiz:.4f}", fontsize=9)
-
-    plt.title(metodo)
-    plt.legend()
-    plt.grid()
-
-    img_bytes = io.BytesIO()
-    plt.savefig(img_bytes, format='png')
-    plt.close()
-    img_bytes.seek(0)
-
-    return img_bytes
-
-#  NEWTON
-def exportar_excel_newton(df, f, iteraciones):
+def exportar_excel_generico(df, f_num=None, metodo_nombre="Reporte", extra_data=None):
     output = io.BytesIO()
-
     wb = Workbook()
     ws = wb.active
-    ws.title = "Newton"
+    ws.title = str(metodo_nombre)[:30]
+    
+    if isinstance(df, list):
+        df = pd.DataFrame(df)
 
-    headers = ['i', 'Ci', 'f(Ci)', "f'(Ci)", 'Ci+1', 'Error%']
-    ws.append(headers)
+    # Estilos profesionales
+    header_fill = PatternFill(start_color="1F4E78", end_color="1F4E78", fill_type="solid")
+    header_font = Font(color="FFFFFF", bold=True)
+    thin_border = Border(left=Side(style='thin'), right=Side(style='thin'), 
+                         top=Side(style='thin'), bottom=Side(style='thin'))
 
-    for row in df.itertuples(index=False):
-        ws.append(list(row))
+    # Ajustar encabezados si hay iteraciones
+    columnas_originales = df.columns.tolist()
+    nuevos_encabezados = []
+    for col in columnas_originales:
+        if col.lower() == 'iteraciones':
+            nuevos_encabezados.extend(['Resultado Final', 'Error Relativo'])
+        else:
+            nuevos_encabezados.append(col)
+    ws.append(nuevos_encabezados)
+    
+    # Agregar datos procesados
+    for _, fila in df.iterrows():
+        ws.append(procesar_fila_compleja(fila))
 
-    img_bytes = generar_grafico(f, iteraciones, "Método Newton-Raphson")
+    # Aplicar formato a toda la tabla
+    for row in ws.iter_rows(min_row=1, max_row=ws.max_row):
+        for cell in row:
+            cell.border = thin_border
+            cell.alignment = Alignment(horizontal="center", vertical="center")
+            if cell.row == 1:
+                cell.fill = header_fill
+                cell.font = header_font
 
-    img = Image(img_bytes)
-    ws.add_image(img, "H2")
-
-    for cell in ws[1]:
-        cell.font = Font(bold=True)
+    # Auto-ajuste de ancho
+    for column in ws.columns:
+        max_length = max(len(str(cell.value)) for cell in column)
+        ws.column_dimensions[column[0].column_letter].width = max_length + 4
 
     wb.save(output)
     output.seek(0)
     return output.getvalue()
 
+# --- MÉTODOS CERRADOS (Bisección y Regla Falsa) ---
+# Se agregan valores por defecto (=None) para que no falten argumentos
+def exportar_excel_biseccion(df, f_num=None, iteraciones=None):
+    return exportar_excel_generico(df, f_num, "Biseccion")
 
-# SECANTE
-def exportar_excel_secante(df, f, iteraciones):
+def exportar_excel_regla_falsa(df, f_num=None, iteraciones=None):
+    return exportar_excel_generico(df, f_num, "ReglaFalsa")
+
+# --- MÉTODOS ABIERTOS ---
+# Usamos *args o valores por defecto para atrapar lo que mande la vista
+def exportar_excel_newton(df, f_num=None, f_der_num=None, x0=None):
+    return exportar_excel_generico(df, f_num, "NewtonRaphson")
+
+def exportar_excel_secante(df, f_num=None, x0=None, x1=None):
+    return exportar_excel_generico(df, f_num, "Secante")
+
+def exportar_excel_punto_fijo(df, f_num=None, g_num=None, x0=None):
+    return exportar_excel_generico(df, f_num, "PuntoFijo")
+
+# --- SERIE DE TAYLOR ---
+def exportar_excel_taylor(df, f_num=None, poly_func=None, x_eval=None, a=None):
     output = io.BytesIO()
-
     wb = Workbook()
     ws = wb.active
-    ws.title = "Secante"
-
-    headers = ['i', 'Ci-1', 'Ci', 'f(Ci-1)', 'f(Ci)', 'Ci+1', 'Error%']
-    ws.append(headers)
-
-    for row in df.itertuples(index=False):
-        ws.append(list(row))
-
-    img_bytes = generar_grafico(f, iteraciones, "Método de la Secante")
-
-    img = Image(img_bytes)
-    ws.add_image(img, "H2")
-
-    for cell in ws[1]:
-        cell.font = Font(bold=True)
-
+    ws.title = "SerieDeTaylor"
+    
+    # Encabezados específicos
+    ws.append(["REPORTE DE SERIE DE TAYLOR"])
+    if a is not None: ws.append(["Punto de expansión (a):", a])
+    if x_eval is not None: ws.append(["Valor a evaluar (x):", x_eval])
+    ws.append([]) 
+    
+    if isinstance(df, list):
+        df = pd.DataFrame(df)
+        
+    for r in dataframe_to_rows(df, index=False, header=True):
+        ws.append(r)
+        
     wb.save(output)
     output.seek(0)
-    return output.getvalue()
-
-
-# BISECCIÓN
-def exportar_excel_biseccion(df, f, iteraciones):
-    output = io.BytesIO()
-
-    wb = Workbook()
-    ws = wb.active
-    ws.title = "Bisección"
-
-    headers = ['i', 'a', 'b', 'Ci', 'f(Ci)', 'Error%']
-    ws.append(headers)
-
-    for row in df.itertuples(index=False):
-        ws.append(list(row))
-
-    img_bytes = generar_grafico(f, iteraciones, "Método de Bisección")
-
-    img = Image(img_bytes)
-    ws.add_image(img, "H2")
-
-    for cell in ws[1]:
-        cell.font = Font(bold=True)
-
-    wb.save(output)
-    output.seek(0)
-    return output.getvalue()
-
-
-# REGLA FALSA
-def exportar_excel_regla_falsa(df, f, iteraciones):
-    output = io.BytesIO()
-
-    wb = Workbook()
-    ws = wb.active
-    ws.title = "Regla Falsa"
-
-    headers = ['i', 'a', 'b', 'Ci', 'f(Ci)', 'Error%']
-    ws.append(headers)
-
-    for row in df.itertuples(index=False):
-        ws.append(list(row))
-
-    img_bytes = generar_grafico(f, iteraciones, "Método de la Regla Falsa")
-
-    img = Image(img_bytes)
-    ws.add_image(img, "H2")
-
-    for cell in ws[1]:
-        cell.font = Font(bold=True)
-
-    wb.save(output)
-    output.seek(0)
-    return output.getvalue()
-
-def exportar_excel_punto_fijo(resultados):
-
-    output = io.BytesIO()
-
-    wb = Workbook()
-
-    wb.remove(wb.active)
-
-    for i, item in enumerate(resultados):
-
-        intervalo = item["intervalo"]
-        g_name = item["g"]
-        iteraciones = item["iteraciones"]
-
-        ws = wb.create_sheet(title=f"{g_name}_R{i+1}")
-
-        ws.append(["i", "Ci", "Ci+1", "Error%"])
-
-        for it in iteraciones:
-            ws.append([
-                it["i"],
-                it["Ci"],
-                it["Ci+1"],
-                it["Error%"]
-            ])
-
-        for cell in ws[1]:
-            cell.font = Font(bold=True)
-
-    wb.save(output)
-    output.seek(0)
-
-    return output.getvalue()
+    return output.getvalue()    
