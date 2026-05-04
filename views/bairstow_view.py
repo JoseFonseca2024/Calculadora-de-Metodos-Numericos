@@ -36,7 +36,7 @@ def mostrar_bairstow():
         raices = res["raices"]
 
         st.subheader("Polinomio:")
-        st.latex(f"f(x) = {sp.latex(p_sym)}")
+        st.latex(f"P(x) = {sp.latex(p_sym)}")
 
         st.write(f"Grado: {grado}")
         st.write(f"Coeficientes: {coeficientes}")
@@ -47,13 +47,21 @@ def mostrar_bairstow():
             for i, coef in enumerate(coeficientes):
                 st.latex(f"a_{len(coeficientes)-1-i} = {coef}")
 
+            ultimo_r = None
+            ultimo_s = None
+            ultimo_b = None
+
             for it in iteraciones:
-                st.markdown(f"# Iteración {it['iter']} (modo: {it['modo']})")
+                st.markdown(f"# Factor {it['factor']} — Iteración {it['iter']+1} (modo: {it['modo']})")
 
                 r = it["r_old"]
                 s = it["s_old"]
                 b = it["b"]
                 c = it["c"]
+
+                ultimo_r = it["r"]
+                ultimo_s = it["s"]
+                ultimo_b = b
 
                 if it["iter"] == 0:
                     if it["modo"] == "pequeñas":
@@ -121,6 +129,39 @@ def mostrar_bairstow():
                     st.latex(f"E_{{x2}} = {it['error_x2']:.8f}\\%")
 
                 st.markdown("---")
+
+            st.markdown("# Resultado del factor")
+
+            st.latex(f"x^2 - ({ultimo_r:.10f})x - ({ultimo_s:.10f})")
+
+            # 🔹 Redondeo
+            r_red = round(ultimo_r)
+            s_red = round(ultimo_s)
+
+            st.markdown("### Redondeo")
+            st.latex(f"x^2 - {r_red}x - {s_red}")
+
+            # 🔹 División
+            st.markdown("### División del polinomio")
+            st.latex(
+            f"\\frac{{{sp.latex(p_sym)}}}{{x^2 - {r_red}x - {s_red}}}"
+            )
+
+            # 🔹 Cociente (usando b)
+            cociente = ultimo_b[2:]
+            x = sp.symbols('x')
+
+            poly_cociente = sum(
+                cociente[i] * x**i for i in range(len(cociente))
+            )
+
+            st.latex(f"= {sp.latex(poly_cociente)}")
+
+            # 🔹 Raíz restante
+            if len(cociente) == 2:
+                raiz = -cociente[0] / cociente[1]
+                st.markdown("### Raíz restante")
+                st.latex(f"x = {-cociente[0]:.8f} / {cociente[1]:.8f} = {raiz:.8f}")
 
         # 🔹 RESULTADO FINAL
         st.success("Raíces aproximadas:")

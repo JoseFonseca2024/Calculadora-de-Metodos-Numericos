@@ -69,7 +69,6 @@ def validar_y_preparar_funcion(funcion_str):
         x = sp.symbols('x')
 
         local_dict = {
-            "e": sp.E,
             "pi": sp.pi,
 
             # trig
@@ -94,6 +93,9 @@ def validar_y_preparar_funcion(funcion_str):
             local_dict=local_dict
         )
 
+        if not f_sym.has(x):
+            return False, "La función debe depender de x", None
+
         # 🔹 Numérico
         f_num = sp.lambdify(x, f_sym, 'numpy')
 
@@ -102,7 +104,7 @@ def validar_y_preparar_funcion(funcion_str):
         f_der_num = sp.lambdify(x, f_der_sym, 'numpy')
 
         # 🔹 Visual
-        f_visual = texto_original.replace("**", "^")
+        f_visual = sp.latex(f_sym)
         f_visual = re.sub(r'\^([\-\+]?[a-zA-Z0-9\(\)]+)', r'^{\1}', f_visual)
         f_visual = f_visual.replace("*", "")
 

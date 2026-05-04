@@ -1,12 +1,11 @@
 import streamlit as st
-import sympy as sp
 import pandas as pd
 from utils.funciones import validar_y_preparar_funcion
 from utils.formateo import fmt
 from metodos.biseccion import ejecutar_biseccion
 from Services.procesamiento import filtrar_iteraciones
 from plot.graficas import graficar_metodo_cerrado
-from Services.exportar_excel import exportar_excel_newton as exportar_excel_bytes
+from Services.exportar_excel import exportar_excel_biseccion
 
 def mostrar_biseccion():
     st.title("Método de Bisección")
@@ -30,7 +29,7 @@ def mostrar_biseccion():
             return
 
         # Desempaquetado de 5 valores
-        f_sym, x_sym, f_num, f_der_num, f_visual = datos
+        _, _, f_num, _, f_visual = datos
         
         ok, msg, iteraciones = ejecutar_biseccion(f_num, a, b, tol)
 
@@ -82,6 +81,9 @@ def mostrar_biseccion():
             it["f(a)"] = float(f_num(it["a"]))
             it["f(b)"] = float(f_num(it["b"]))
 
+        if "i" in it:
+            it["i"] = int(it["i"])
+
         iteraciones_visibles = filtrar_iteraciones(iteraciones, tol)
         df = pd.DataFrame(iteraciones_visibles)
         
@@ -95,5 +97,10 @@ def mostrar_biseccion():
         fig = graficar_metodo_cerrado(f_num, iteraciones_visibles, "Convergencia: Bisección")
         st.pyplot(fig)
 
-        excel_bytes = exportar_excel_bytes(df, f_num, iteraciones_visibles)
+        excel_bytes = exportar_excel_biseccion(
+            df,
+            f_num,
+            iteraciones_visibles
+        )
+        
         st.download_button(label="📊 Descargar Excel", data=excel_bytes, file_name="Biseccion.xlsx")

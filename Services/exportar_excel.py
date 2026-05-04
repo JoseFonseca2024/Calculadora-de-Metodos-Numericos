@@ -1,118 +1,203 @@
 import io
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
+
 from openpyxl import Workbook
-from openpyxl.utils.dataframe import dataframe_to_rows
+from openpyxl.drawing.image import Image
 from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 
+# IMPORTAR GRÁFICAS 
+from plot.graficas import (
+    graficar_metodo_cerrado,
+    graficar_newton,
+    graficar_secante,
+    graficar_punto_fijo,
+    graficar_taylor
+)
+
+
+# 🔹 PROCESADOR DE FILAS
 def procesar_fila_compleja(fila):
-    """Procesa la fila para separar resultados y errores en columnas distintas."""
     nueva_fila = []
+
     for celda in fila:
-        # Limpieza de Tuplas (Intervalos)
+
         if isinstance(celda, tuple):
             nueva_fila.append(f"[{celda[0]:.4f}, {celda[1]:.4f}]")
-        
-        # Limpieza de Listas (Iteraciones) -> Separar en 2 valores
+
         elif isinstance(celda, list) and len(celda) > 0 and isinstance(celda[-1], dict):
             ult = celda[-1]
-            res = ult.get('raiz') or ult.get('Ci+1') or ult.get('x_nuevo') or 0
-            err = ult.get('Error%') or ult.get('error') or 0
+
+            res = (
+                ult.get('raiz') or
+                ult.get('Ci+1') or
+                ult.get('x_nuevo') or
+                0
+            )
+
+            err = (
+                ult.get('Error%') or
+                ult.get('error') or
+                0
+            )
+
             nueva_fila.append(round(float(res), 6))
             nueva_fila.append(f"{err:.4e}")
-            
-        # Limpieza de Números
+
         elif isinstance(celda, (float, np.float64, np.float32)):
             nueva_fila.append(round(float(celda), 8))
+
         else:
             nueva_fila.append(celda)
+
     return nueva_fila
 
-def exportar_excel_generico(df, f_num=None, metodo_nombre="Reporte", extra_data=None):
+
+# 🔹 EXPORTADOR GENÉRICO (TODOS LOS MÉTODOS)
+def exportar_excel_generico(
+    df,
+    f_num=None,
+    metodo_nombre="Reporte",
+    iteraciones=None,
+    extra_params=None
+):
+
     output = io.BytesIO()
     wb = Workbook()
     ws = wb.active
-    ws.title = str(metodo_nombre)[:30]
-    
+    ws.title = metodo_nombre[:30]
+
     if isinstance(df, list):
         df = pd.DataFrame(df)
 
-    # Estilos profesionales
+    # ESTILOS
     header_fill = PatternFill(start_color="1F4E78", end_color="1F4E78", fill_type="solid")
     header_font = Font(color="FFFFFF", bold=True)
-    thin_border = Border(left=Side(style='thin'), right=Side(style='thin'), 
-                         top=Side(style='thin'), bottom=Side(style='thin'))
 
-    # Ajustar encabezados si hay iteraciones
-    columnas_originales = df.columns.tolist()
-    nuevos_encabezados = []
-    for col in columnas_originales:
-        if col.lower() == 'iteraciones':
-            nuevos_encabezados.extend(['Resultado Final', 'Error Relativo'])
-        else:
-            nuevos_encabezados.append(col)
-    ws.append(nuevos_encabezados)
-    
-    # Agregar datos procesados
+    thin_border = Border(
+        left=Side(style='thin'),
+        right=Side(style='thin'),
+        top=Side(style='thin'),
+        bottom=Side(style='thin')
+    )
+
+    # 🔹 ENCABEZADOS
+    ws.append(df.columns.tolist())
+
+    # 🔹 DATOS
     for _, fila in df.iterrows():
         ws.append(procesar_fila_compleja(fila))
 
-    # Aplicar formato a toda la tabla
+    # 🔹 FORMATO
     for row in ws.iter_rows(min_row=1, max_row=ws.max_row):
         for cell in row:
             cell.border = thin_border
             cell.alignment = Alignment(horizontal="center", vertical="center")
+
             if cell.row == 1:
                 cell.fill = header_fill
                 cell.font = header_font
 
-    # Auto-ajuste de ancho
+    # 🔹 AUTO AJUSTE
     for column in ws.columns:
         max_length = max(len(str(cell.value)) for cell in column)
         ws.column_dimensions[column[0].column_letter].width = max_length + 4
 
+    # 🔥 GRÁFICAS 
+    fig = None
+
+    try:
+
+        if metodo_nombre in ["Biseccion", "ReglaFalsa"]:
+            if iteraciones:
+                fig = graficar_metodo_cerrado(f_num, iteraciones, metodo_nombre)
+
+        elif metodo_nombre == "NewtonRaphson":
+            if iteraciones:
+                fig = graficar_newton(f_num, iteraciones)
+
+        elif metodo_nombre == "Secante":
+            if iteraciones:
+                fig = graficar_secante(f_num, iteraciones)
+
+        elif metodo_nombre == "PuntoFijo" and extra_params:
+            fig = graficar_punto_fijo(
+                extra_params["gs"],
+                extra_params["x_min"],
+                extra_params["x_max"]
+            )
+
+        elif metodo_nombre == "Taylor" and extra_params:
+            fig = graficar_taylor(
+                f_num,
+                extra_params["poly_func"],
+                extra_params["x_eval"],
+                extra_params["a"]
+            )
+
+        # 🔹 insertar imagen
+        if fig:
+            img_bytes = io.BytesIO()
+            fig.savefig(img_bytes, format='png')
+            plt.close(fig)
+
+            img_bytes.seek(0)
+            img = Image(img_bytes)
+            ws.add_image(img, "H2")
+
+    except Exception as e:
+        print("Error generando gráfica:", e)
+
     wb.save(output)
     output.seek(0)
+
     return output.getvalue()
 
-# --- MÉTODOS CERRADOS (Bisección y Regla Falsa) ---
-# Se agregan valores por defecto (=None) para que no falten argumentos
+
+# 🔹 MÉTODOS ESPECÍFICOS
+
 def exportar_excel_biseccion(df, f_num=None, iteraciones=None):
-    return exportar_excel_generico(df, f_num, "Biseccion")
+    return exportar_excel_generico(df, f_num, "Biseccion", iteraciones)
+
 
 def exportar_excel_regla_falsa(df, f_num=None, iteraciones=None):
-    return exportar_excel_generico(df, f_num, "ReglaFalsa")
+    return exportar_excel_generico(df, f_num, "ReglaFalsa", iteraciones)
 
-# --- MÉTODOS ABIERTOS ---
-# Usamos *args o valores por defecto para atrapar lo que mande la vista
-def exportar_excel_newton(df, f_num=None, f_der_num=None, x0=None):
-    return exportar_excel_generico(df, f_num, "NewtonRaphson")
 
-def exportar_excel_secante(df, f_num=None, x0=None, x1=None):
-    return exportar_excel_generico(df, f_num, "Secante")
+def exportar_excel_newton(df, f_num=None, iteraciones=None):
+    return exportar_excel_generico(df, f_num, "NewtonRaphson", iteraciones)
 
-def exportar_excel_punto_fijo(df, f_num=None, g_num=None, x0=None):
-    return exportar_excel_generico(df, f_num, "PuntoFijo")
 
-# --- SERIE DE TAYLOR ---
+def exportar_excel_secante(df, f_num=None, iteraciones=None):
+    return exportar_excel_generico(df, f_num, "Secante", iteraciones)
+
+
+def exportar_excel_punto_fijo(df, f_num=None, gs=None, x_min=None, x_max=None, iteraciones=None):
+    return exportar_excel_generico(
+        df,
+        f_num,
+        "PuntoFijo",
+        iteraciones,
+        {
+            "gs": gs,
+            "x_min": x_min,
+            "x_max": x_max
+        }
+    )
+
+
 def exportar_excel_taylor(df, f_num=None, poly_func=None, x_eval=None, a=None):
-    output = io.BytesIO()
-    wb = Workbook()
-    ws = wb.active
-    ws.title = "SerieDeTaylor"
-    
-    # Encabezados específicos
-    ws.append(["REPORTE DE SERIE DE TAYLOR"])
-    if a is not None: ws.append(["Punto de expansión (a):", a])
-    if x_eval is not None: ws.append(["Valor a evaluar (x):", x_eval])
-    ws.append([]) 
-    
-    if isinstance(df, list):
-        df = pd.DataFrame(df)
-        
-    for r in dataframe_to_rows(df, index=False, header=True):
-        ws.append(r)
-        
-    wb.save(output)
-    output.seek(0)
-    return output.getvalue()    
+
+    # 📊 se manda como genérico pero con parámetros especiales
+    return exportar_excel_generico(
+        df,
+        f_num,
+        "Taylor",
+        None,
+        {
+            "poly_func": poly_func,
+            "x_eval": x_eval,
+            "a": a
+        }
+    )
