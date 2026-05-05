@@ -10,7 +10,7 @@ from Services.exportar_excel import exportar_excel_taylor
 
 
 def mostrar_taylor():
-    st.title("Serie de Taylor - Reporte Académico")
+    st.title("Serie de Taylor")
     st.markdown("Calcula el polinomio de aproximación y el error mediante el desarrollo de Taylor.")
 
     funcion_str = st.text_input("Introduzca una función f(x):", placeholder="Ej: e^x")
