@@ -23,10 +23,10 @@ def ejecutar_regla_falsa(f, a, b, tol):
         if f_xr is None:
             return False, "Error al evaluar la función durante las iteraciones.", None
 
-        error = abs((xr - xr_viejo) / xr) * 100 if i > 0 else 100
+        error = abs((xr - xr_viejo) / xr) * 100 if i > 0 else float('nan')
 
         iteraciones.append({
-            "i": i,
+            "i": i+1,
             "a": a,
             "b": b,
             "f(a)": f_a,

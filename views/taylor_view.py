@@ -36,7 +36,7 @@ def mostrar_taylor():
             st.error(error_msg)
             return
 
-        f_sym, x, f_num, f_deriv, f_visual = datos
+        f_sym, x, f_num, _, _ = datos
 
         ok, msg, res = ejecutar_taylor(f_sym, x, a, n_max, x_eval)
 

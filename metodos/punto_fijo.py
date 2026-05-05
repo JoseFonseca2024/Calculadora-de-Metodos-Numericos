@@ -25,7 +25,7 @@ def ejecutar_punto_fijo(g, x0, tol):
             if i > 100:
                 return False, "El método no converge.", None
 
-        except:
-            return False, "Error en evaluación numérica.", None
+        except (ValueError, ZeroDivisionError, TypeError) as e:
+            return False, f"Error en evaluación numérica: {str(e)}", None
 
     return True, "", iteraciones

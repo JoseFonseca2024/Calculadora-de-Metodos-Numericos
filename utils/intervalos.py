@@ -34,7 +34,7 @@ def encontrar_intervalos_raiz(
             elif fa == 0:
                 intervalos.append((a, a))
 
-        except:
+        except (ValueError, ZeroDivisionError, TypeError):
             continue
 
     return intervalos

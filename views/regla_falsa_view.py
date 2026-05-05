@@ -13,7 +13,6 @@ from utils.evaluacion_segura import evaluar_seguro
 
 def mostrar_regla_falsa():
     st.title("Método de la Regla Falsa")
-    st.markdown("Este método utiliza interpolación lineal para aproximar la raíz en un intervalo cerrado.")
 
     # 🔹 Entrada
     funcion_str = st.text_input(
@@ -23,11 +22,11 @@ def mostrar_regla_falsa():
 
     col1, col2 = st.columns(2)
     with col1:
-        a = st.number_input("Límite inferior (a):", value=0.0, format="%.8f")
+        a = st.number_input("Límite inferior (a):", value=0.0, format="%.4f")
     with col2:
-        b = st.number_input("Límite superior (b):", value=1.0, format="%.8f")
+        b = st.number_input("Límite superior (b):", value=1.0, format="%.4f")
 
-    tol = st.number_input("Tolerancia (%)", value=0.0001, format="%.8f")
+    tol = st.number_input("Tolerancia (%)", value=0.00001, format="%.5f")
 
     if st.button("Calcular"):
 
@@ -47,7 +46,7 @@ def mostrar_regla_falsa():
         f_render = f_render.replace("*", "")
         st.latex(f"f(x) = {f_render}")
 
-        # 🔹 2. Verificación de raíz
+        # 🔹 2. Evaluación inicial 
         fa_init = evaluar_seguro(f_num, a)
         fb_init = evaluar_seguro(f_num, b)
 
@@ -55,10 +54,20 @@ def mostrar_regla_falsa():
             st.error("La función no se puede evaluar en el intervalo.")
             return
 
-        st.subheader("Verificación de existencia de raíz")
-        st.latex(f"f(a) = f({a:.4f}) = {fa_init:.8f}")
-        st.latex(f"f(b) = f({b:.4f}) = {fb_init:.8f}")
+        st.subheader("Evaluación en los extremos del intervalo")
 
+        f_a_sust = texto_visual.replace("x", f"({a:.6f})")
+        f_b_sust = texto_visual.replace("x", f"({b:.6f})")
+
+        st.latex(f"f(a) = {texto_visual}")
+        st.latex(f"f(a) = {f_a_sust}")
+        st.latex(f"f(a) = {fa_init:.8f}")
+
+        st.latex(f"f(b) = {texto_visual}")
+        st.latex(f"f(b) = {f_b_sust}")
+        st.latex(f"f(b) = {fb_init:.8f}")
+
+        # 🔹 Verificación
         if fa_init * fb_init > 0:
             st.error("No hay cambio de signo en el intervalo.")
             return
@@ -76,9 +85,11 @@ def mostrar_regla_falsa():
         st.subheader("Procedimiento Paso a Paso")
         with st.expander("Ver cálculos detallados", expanded=False):
 
-            for it in iteraciones:
+            for idx, it in enumerate(iteraciones):
+
                 st.write(f"#### Iteración {it['i']}")
 
+                # 🔹 Fórmula
                 st.latex(
                     rf"c_{{{it['i']}}} = {it['b']:.8f} - "
                     rf"\frac{{({it['f(b)']:.8f})({it['a']:.8f} - {it['b']:.8f})}}"
@@ -86,10 +97,30 @@ def mostrar_regla_falsa():
                 )
 
                 st.latex(rf"c_{{{it['i']}}} = {it['Ci']:.8f}")
+
+                # 🔹 Sustitución en f(c)
+                c_val = it["Ci"]
+                f_sust = texto_visual.replace("x", f"({c_val:.8f})")
+
+                st.latex(rf"f(c_{{{it['i']}}}) = {f_sust}")
                 st.latex(rf"f(c_{{{it['i']}}}) = {it['f(Ci)']:.8f}")
 
+                # 🔹 Error
                 if it["Error%"] is not None:
                     st.latex(rf"Error = {it['Error%']:.8f}\%")
+
+                # 🔹 Decisión de intervalo
+                if idx < len(iteraciones) - 1:
+                    siguiente = iteraciones[idx + 1]
+
+                    if siguiente["a"] == c_val:
+                        st.info(
+                            rf"Como $f(a)\cdot f(c) > 0$, la raíz está en $[{c_val:.6f}, {it['b']:.6f}]$"
+                        )
+                    else:
+                        st.info(
+                            rf"Como $f(a)\cdot f(c) < 0$, la raíz está en $[{it['a']:.6f}, {c_val:.6f}]$"
+                        )
 
                 st.markdown("---")
 

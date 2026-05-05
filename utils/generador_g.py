@@ -32,7 +32,7 @@ def generar_gs_algebraicas(expr):
                     )
                 )
 
-        except:
+        except (ValueError, TypeError, NotImplementedError):
             pass
 
 
@@ -49,7 +49,7 @@ def generar_gs_algebraicas(expr):
                     )
                 )
 
-        except:
+        except (ValueError, TypeError, NotImplementedError):
             pass
 
 
@@ -66,7 +66,7 @@ def generar_gs_algebraicas(expr):
                     )
                 )
 
-        except:
+        except (ValueError, TypeError, NotImplementedError):
             pass
 
 

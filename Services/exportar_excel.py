@@ -7,7 +7,6 @@ from openpyxl import Workbook
 from openpyxl.drawing.image import Image
 from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 
-# IMPORTAR GRÁFICAS 
 from plot.graficas import (
     graficar_metodo_cerrado,
     graficar_newton,
@@ -16,8 +15,7 @@ from plot.graficas import (
     graficar_taylor
 )
 
-
-# 🔹 PROCESADOR DE FILAS
+# 🔹 PROCESADOR UNIVERSAL (NO ROMPE NADA)
 def procesar_fila_compleja(fila):
     nueva_fila = []
 
@@ -54,14 +52,8 @@ def procesar_fila_compleja(fila):
     return nueva_fila
 
 
-# 🔹 EXPORTADOR GENÉRICO (TODOS LOS MÉTODOS)
-def exportar_excel_generico(
-    df,
-    f_num=None,
-    metodo_nombre="Reporte",
-    iteraciones=None,
-    extra_params=None
-):
+# 🔹 EXPORTADOR GENÉRICO
+def exportar_excel_generico(df, f_num=None, metodo_nombre="Reporte", iteraciones=None, extra_params=None):
 
     output = io.BytesIO()
     wb = Workbook()
@@ -71,7 +63,6 @@ def exportar_excel_generico(
     if isinstance(df, list):
         df = pd.DataFrame(df)
 
-    # ESTILOS
     header_fill = PatternFill(start_color="1F4E78", end_color="1F4E78", fill_type="solid")
     header_font = Font(color="FFFFFF", bold=True)
 
@@ -82,14 +73,11 @@ def exportar_excel_generico(
         bottom=Side(style='thin')
     )
 
-    # 🔹 ENCABEZADOS
     ws.append(df.columns.tolist())
 
-    # 🔹 DATOS
     for _, fila in df.iterrows():
         ws.append(procesar_fila_compleja(fila))
 
-    # 🔹 FORMATO
     for row in ws.iter_rows(min_row=1, max_row=ws.max_row):
         for cell in row:
             cell.border = thin_border
@@ -99,27 +87,22 @@ def exportar_excel_generico(
                 cell.fill = header_fill
                 cell.font = header_font
 
-    # 🔹 AUTO AJUSTE
     for column in ws.columns:
         max_length = max(len(str(cell.value)) for cell in column)
         ws.column_dimensions[column[0].column_letter].width = max_length + 4
 
-    # 🔥 GRÁFICAS 
-    fig = None
-
+    # 🔹 GRÁFICAS
     try:
+        fig = None
 
-        if metodo_nombre in ["Biseccion", "ReglaFalsa"]:
-            if iteraciones:
-                fig = graficar_metodo_cerrado(f_num, iteraciones, metodo_nombre)
+        if metodo_nombre in ["Biseccion", "ReglaFalsa"] and iteraciones:
+            fig = graficar_metodo_cerrado(f_num, iteraciones, metodo_nombre)
 
-        elif metodo_nombre == "NewtonRaphson":
-            if iteraciones:
-                fig = graficar_newton(f_num, iteraciones)
+        elif metodo_nombre == "NewtonRaphson" and iteraciones:
+            fig = graficar_newton(f_num, iteraciones)
 
-        elif metodo_nombre == "Secante":
-            if iteraciones:
-                fig = graficar_secante(f_num, iteraciones)
+        elif metodo_nombre == "Secante" and iteraciones:
+            fig = graficar_secante(f_num, iteraciones)
 
         elif metodo_nombre == "PuntoFijo" and extra_params:
             fig = graficar_punto_fijo(
@@ -136,7 +119,6 @@ def exportar_excel_generico(
                 extra_params["a"]
             )
 
-        # 🔹 insertar imagen
         if fig:
             img_bytes = io.BytesIO()
             fig.savefig(img_bytes, format='png')
@@ -146,8 +128,8 @@ def exportar_excel_generico(
             img = Image(img_bytes)
             ws.add_image(img, "H2")
 
-    except Exception as e:
-        print("Error generando gráfica:", e)
+    except (ValueError, TypeError, RuntimeError, OSError) as e:
+        print("Error generando gráfica:", e)   
 
     wb.save(output)
     output.seek(0)
@@ -155,49 +137,28 @@ def exportar_excel_generico(
     return output.getvalue()
 
 
-# 🔹 MÉTODOS ESPECÍFICOS
+# 🔹 MÉTODOS
 
 def exportar_excel_biseccion(df, f_num=None, iteraciones=None):
     return exportar_excel_generico(df, f_num, "Biseccion", iteraciones)
 
-
 def exportar_excel_regla_falsa(df, f_num=None, iteraciones=None):
     return exportar_excel_generico(df, f_num, "ReglaFalsa", iteraciones)
-
 
 def exportar_excel_newton(df, f_num=None, iteraciones=None):
     return exportar_excel_generico(df, f_num, "NewtonRaphson", iteraciones)
 
-
 def exportar_excel_secante(df, f_num=None, iteraciones=None):
     return exportar_excel_generico(df, f_num, "Secante", iteraciones)
 
-
 def exportar_excel_punto_fijo(df, f_num=None, gs=None, x_min=None, x_max=None, iteraciones=None):
     return exportar_excel_generico(
-        df,
-        f_num,
-        "PuntoFijo",
-        iteraciones,
-        {
-            "gs": gs,
-            "x_min": x_min,
-            "x_max": x_max
-        }
+        df, f_num, "PuntoFijo", iteraciones,
+        {"gs": gs, "x_min": x_min, "x_max": x_max}
     )
 
-
 def exportar_excel_taylor(df, f_num=None, poly_func=None, x_eval=None, a=None):
-
-    # 📊 se manda como genérico pero con parámetros especiales
     return exportar_excel_generico(
-        df,
-        f_num,
-        "Taylor",
-        None,
-        {
-            "poly_func": poly_func,
-            "x_eval": x_eval,
-            "a": a
-        }
+        df, f_num, "Taylor", None,
+        {"poly_func": poly_func, "x_eval": x_eval, "a": a}
     )

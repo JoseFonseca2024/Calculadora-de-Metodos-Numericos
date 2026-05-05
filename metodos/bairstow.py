@@ -161,5 +161,5 @@ def ejecutar_bairstow(coeficientes, tol, max_iter=100):
 
         return True, "", {"raices": raices, "iteraciones": historial}
 
-    except Exception as e:
+    except (ValueError, ZeroDivisionError) as e:
         return False, f"Error en Bairstow: {str(e)}", None

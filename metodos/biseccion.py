@@ -16,13 +16,13 @@ def ejecutar_biseccion(f, a, b, tol):
 
     while True:
         xr = (a + b) / 2
-
         f_xr = evaluar_seguro(f, xr)
-        if f_xr is None:
-            return False, "Error al evaluar la función durante las iteraciones.", None
 
-        error = abs((xr - xr_viejo) / xr) * 100 if i > 0 else 100
-        
+        if f_xr is None:
+            return False, "Error al evaluar la función.", None
+
+        error = abs((xr - xr_viejo) / xr) * 100 if i > 0 else float('nan')
+
         iteraciones.append({
             "i": i,
             "a": a,
@@ -48,6 +48,6 @@ def ejecutar_biseccion(f, a, b, tol):
         i += 1
 
         if i > 100:
-            return False, "El método no converge.", None
+            return False, "No converge", None
 
     return True, "", iteraciones
