@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import sympy as sp
+import numpy as np
 
 from utils.funciones import validar_y_preparar_funcion
 from utils.generador_g import generar_gs_algebraicas
@@ -27,45 +28,34 @@ def mostrar_punto_fijo():
         format="%.8f"
     )
 
-    # CONFIGURACIÓN DE BÚSQUEDA
+    # 🔍 CONFIGURACIÓN DE INTERVALOS
     st.subheader("Búsqueda de Intervalos")
 
     col1, col2, col3 = st.columns(3)
 
     with col1:
-        inicio_busqueda = st.number_input(
-            "Desde",
-            value=-10.0
-        )
+        inicio_busqueda = st.number_input("Desde", value=-10.0)
 
     with col2:
-        fin_busqueda = st.number_input(
-            "Hasta",
-            value=10.0
-        )
+        fin_busqueda = st.number_input("Hasta", value=10.0)
 
     with col3:
-        paso_busqueda = st.number_input(
-            "Paso",
-            value=1.0,
-            min_value=0.01
-        )
+        paso_busqueda = st.number_input("Paso", value=0.01, min_value=0.01)
 
     if st.button("Calcular"):
 
-        # VALIDACIÓN INTERVALO
+        # VALIDACIÓN
         if inicio_busqueda >= fin_busqueda:
             st.error("El valor 'Desde' debe ser menor que 'Hasta'.")
             return
 
-        # VALIDAR FUNCIÓN
         valido, error_msg, datos = validar_y_preparar_funcion(funcion_str)
 
         if not valido:
             st.error(error_msg)
             return
 
-        f_sym, x, f_num, _, f_visual = datos
+        f_sym, x, f_num, _, _ = datos
 
         # GENERAR g(x)
         gs = generar_gs_algebraicas(f_sym)
@@ -74,7 +64,7 @@ def mostrar_punto_fijo():
             st.error("No se pudieron generar funciones g(x).")
             return
 
-        # ENCONTRAR INTERVALOS
+        # BUSCAR INTERVALOS
         intervalos = encontrar_intervalos_raiz(
             f_num,
             inicio_busqueda,
@@ -88,11 +78,10 @@ def mostrar_punto_fijo():
 
         # MOSTRAR FUNCIÓN
         st.subheader("Función Original:")
-        st.latex(f"f(x)={sp.latex(f_sym)}")
+        st.latex(f"f(x) = {sp.latex(f_sym)}")
 
         # MOSTRAR g(x)
         st.subheader("Funciones g(x) Generadas:")
-
         for g_data in gs:
             st.latex(f"{g_data['nombre']} = {g_data['latex']}")
 
@@ -100,34 +89,83 @@ def mostrar_punto_fijo():
 
         resultados_globales = []
 
-        # RECORRER INTERVALOS
+        # 🔁 RECORRER INTERVALOS
         for idx, intervalo in enumerate(intervalos):
 
             a, b = intervalo
             x0 = (a + b) / 2
 
             st.header(f"Raíz #{idx+1} detectada en ({a}, {b})")
-
             st.success(f"Valor inicial automático X₀ = {x0:.8f}")
 
-            # PREPARAR GS PARA GRÁFICA
-            gs_grafica = []
+            # 🔥 FILTRO DE CONVERGENCIA MEJORADO
+            gs_validas = []
 
             for g_data in gs:
-                gs_grafica.append({
-                    "nombre": g_data["nombre"],
-                    "num": sp.lambdify(x, g_data["expr"], "numpy")
-                })
+                try:
+                    g_expr = g_data["expr"]
 
-            # ITERAR g(x)
-            for g_data, g_eval in zip(gs, gs_grafica):
+                    g_deriv = sp.diff(g_expr, x)
 
-                st.subheader(f"Resolviendo con {g_data['nombre']}")
+                    g_num = sp.lambdify(x, g_expr, "numpy")
+                    g_deriv_num = sp.lambdify(x, g_deriv, "numpy")
+
+                    val = g_num(x0)
+
+                    if np.iscomplexobj(val):
+                        if abs(val.imag) > 1e-12:
+                            continue
+                        val = val.real
+
+                    if not np.isfinite(val):
+                        continue
+
+                    val = float(val)
+
+                    deriv_val = g_deriv_num(x0)
+
+                    if np.iscomplexobj(deriv_val):
+                        if abs(deriv_val.imag) > 1e-12:
+                            continue
+                        deriv_val = deriv_val.real
+
+                    if not np.isfinite(deriv_val):
+                        continue
+
+                    deriv_val = abs(float(deriv_val))
+
+                    # ❌ descartar divergentes
+                    if abs(val) > 1e6:
+                        continue
+
+                    if deriv_val >= 1:
+                        continue
+
+                    # ⚠️ advertencia si es casi 1 (lento)
+                    if deriv_val > 0.9:
+                        st.warning(f"{g_data['nombre']} puede converger lento (|g'(x)|≈{deriv_val:.4f})")
+
+                    gs_validas.append({
+                        "nombre": g_data["nombre"],
+                        "expr": g_expr,
+                        "num": g_num
+                    })
+
+                except (ValueError, ZeroDivisionError, TypeError, OverflowError):
+                    continue
+
+            if not gs_validas:
+                st.warning("Ninguna función g(x) converge en este intervalo.")
+                continue
+
+            # 🔁 ITERAR CADA g(x)
+            for g in gs_validas:
+
+                st.subheader(f"Resolviendo con {g['nombre']}")
 
                 try:
-
                     ok, msg, iteraciones = ejecutar_punto_fijo(
-                        g_eval["num"],
+                        g["num"],
                         x0,
                         tol
                     )
@@ -138,48 +176,64 @@ def mostrar_punto_fijo():
 
                     st.success("Método convergente.")
 
-                    # PROCEDIMIENTO
-                    with st.expander(f"Ver procedimiento {g_data['nombre']}"):
+                    with st.expander(f"Ver procedimiento paso a paso ({g['nombre']})", expanded=False):
+
+                        g_expr = g["expr"]
+                        g_latex = sp.latex(g_expr)
 
                         for it in iteraciones:
-                            st.latex(
-                                f"x_{{{it['i']+1}}}=g(x_{{{it['i']}}})={it['Ci+1']:.8f}"
-                            )
+                            i = it["i"]
+                            xi = it["Ci"]
+                            xi1 = it["Ci+1"]
+
+                            st.write(f"**Iteración {i}:**")
+
+                            # 🔹 Forma general
+                            st.latex(f"x_{{{i+1}}} = g(x_{{{i}}})")
+
+                            # 🔹 Sustitución simbólica
+                            valor_latex = f"({xi:.6f})"
+                            g_sust = g_latex.replace("x", valor_latex)
+
+                            st.latex(f"x_{{{i+1}}} = {g_sust}")
+
+                            # 🔹 Evaluación numérica
+                            st.latex(f"x_{{{i+1}}} = {xi1:.8f}")
+
+                            # 🔹 Error
+                            st.latex(f"Error = {it['Error%']:.8f}\\%")
+
+                    # 📊 GRÁFICA (CORRECTAMENTE UBICADA)
+                    st.pyplot(
+                        graficar_punto_fijo(
+                            g["num"],
+                            iteraciones,
+                            inicio_busqueda,
+                            fin_busqueda
+                        )
+                    )
 
                     # TABLA
                     df = pd.DataFrame(iteraciones)
-
                     st.dataframe(df)
 
-                    # RESULTADO
+                    # RESULTADO FINAL
                     st.success(
                         f"Raíz aproximada: {iteraciones[-1]['Ci+1']:.8f}"
                     )
 
-                    # GUARDAR PARA EXCEL UNIFICADO
                     resultados_globales.append({
                         "intervalo": (a, b),
-                        "g": g_data["nombre"],
+                        "g": g["nombre"],
                         "iteraciones": iteraciones
                     })
 
                 except Exception as e:
-                    st.error(f"Error en {g_data['nombre']}: {str(e)}")
-
-            # 🔥 UNA SOLA GRÁFICA POR INTERVALO
-            st.subheader("Gráfica de g(x)")
-
-            st.pyplot(
-                graficar_punto_fijo(
-                    gs_grafica,
-                    inicio_busqueda,
-                    fin_busqueda
-                )
-            )
+                    st.error(f"Error en {g['nombre']}: {str(e)}")
 
             st.divider()
 
-        # 🔥 EXCEL UNIFICADO (UNA SOLA DESCARGA)
+        # 📥 EXPORTACIÓN
         st.subheader("Exportación")
 
         excel_bytes = exportar_excel_punto_fijo(resultados_globales)

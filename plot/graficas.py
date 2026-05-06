@@ -180,53 +180,67 @@ def graficar_secante(f, iteraciones):
 
     return fig
 
-def graficar_punto_fijo(gs, x_min, x_max):
+def graficar_punto_fijo(g, iteraciones, x_min, x_max):
 
-    fig, ax = plt.subplots(figsize=(8,8))
+    fig, ax = plt.subplots(figsize=(8, 8))
 
     x_vals = np.linspace(x_min, x_max, 500)
 
-    # Línea y=x
-    ax.plot(
-        x_vals,
-        x_vals,
-        '--',
-        linewidth=2,
-        label='y = x'
-    )
+    # 🔹 y = x
+    ax.plot(x_vals, x_vals, '--', linewidth=2, label='y = x')
 
-    # Graficar todas las g(x)
-    for g_data in gs:
+    # 🔹 g(x)
+    y_vals = []
+    for xv in x_vals:
+        try:
+            y = g(xv)
+            y_vals.append(y if np.isfinite(y) else np.nan)
+        except (ValueError, ZeroDivisionError, TypeError):
+            y_vals.append(np.nan)
+
+    ax.plot(x_vals, y_vals, linewidth=2, label='g(x)')
+
+    # 🔥 COBWEB CORRECTO
+    x_actual = iteraciones[0]["Ci"]
+
+    for i, it in enumerate(iteraciones):
 
         try:
+            y = g(x_actual)
 
-            g_num = g_data["num"]
+            # Vertical
+            ax.plot([x_actual, x_actual], [x_actual, y], 'r--')
 
-            y_vals = []
+            # Horizontal
+            ax.plot([x_actual, y], [y, y], 'b--')
 
-            for x in x_vals:
+            # Punto
+            ax.scatter(x_actual, y, s=30)
 
-                try:
-                    y_vals.append(g_num(x))
-                except:
-                    y_vals.append(np.nan)
+            # Texto (AHORA CORRECTO)
+            ax.text(x_actual, y, f'$x_{{{i}}}$', fontsize=9)
 
-            ax.plot(
-                x_vals,
-                y_vals,
-                linewidth=2,
-                label=g_data["nombre"]
-            )
+            x_actual = y
 
-        except:
-            continue
+        except (ValueError, ZeroDivisionError, TypeError):
+            break
 
-    ax.grid()
-    ax.legend()
+    raiz = iteraciones[-1]["Ci+1"]
 
-    ax.set_title("Funciones g(x) del Método de Punto Fijo")
+    ax.scatter(
+        raiz,
+        raiz,
+        marker='*',
+        s=200,
+        label=f"Raíz: {raiz:.6f}",
+        zorder=10
+    )
+
+    ax.set_title("Método de Punto Fijo (Cobweb)")
     ax.set_xlabel("x")
     ax.set_ylabel("g(x)")
+    ax.grid(True)
+    ax.legend()
 
     return fig
 
@@ -239,7 +253,7 @@ def graficar_metodo_cerrado(f, iteraciones, titulo):
             "Ci+1": it["b"]
         })
 
-    fig, ax, xmin_real, xmax_real, margen_x = _configurar_grafica_base(
+    fig, ax, _, _, _ = _configurar_grafica_base(
         f, iter_adaptadas, factor_margen=0.6
     )
 
