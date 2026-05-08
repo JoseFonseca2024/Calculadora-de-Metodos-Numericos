@@ -8,6 +8,7 @@ from views.secante_view import mostrar_secante
 from views.punto_fijo_view import mostrar_punto_fijo
 from views.bairstow_view import mostrar_bairstow
 from views.taylor_view import mostrar_taylor
+from views.muller_views import mostrar_muller
 
 st.set_page_config(
     page_title="Calculadora de Métodos Numéricos",
@@ -44,6 +45,8 @@ with st.sidebar.expander("Raíces de ecuaciones no lineales", expanded=True):
 with st.sidebar.expander("Raices de un polinomio", expanded=True):
     if st.button("Metodo de Bairstow", key = "btnBairstow"):
         st.session_state.metodo = "Bairstow"
+    if st.button("Muller"):
+        st.session_state.metodo = "Muller"
 
 # Mostrar contenido
 if st.session_state.metodo is None:
@@ -58,7 +61,6 @@ elif st.session_state.metodo == "Newton-Raphson":
 elif st.session_state.metodo == "Secante":
     mostrar_secante()
 
-# ESTO ES LO QUE DEBES AGREGAR:
 elif st.session_state.metodo == "Bisección":
     mostrar_biseccion()
 
@@ -68,3 +70,5 @@ elif st.session_state.metodo == "Punto Fijo":
     mostrar_punto_fijo()
 elif st.session_state.metodo == "Bairstow":
     mostrar_bairstow()
+elif st.session_state.metodo == "Muller": 
+    mostrar_muller()

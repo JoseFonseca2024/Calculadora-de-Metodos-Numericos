@@ -12,7 +12,8 @@ from plot.graficas import (
     graficar_newton,
     graficar_secante,
     graficar_punto_fijo,
-    graficar_taylor
+    graficar_taylor,
+    graficar_muller
 )
 
 # 🔹 PROCESADOR UNIVERSAL (NO ROMPE NADA)
@@ -162,3 +163,5 @@ def exportar_excel_taylor(df, f_num=None, poly_func=None, x_eval=None, a=None):
         df, f_num, "Taylor", None,
         {"poly_func": poly_func, "x_eval": x_eval, "a": a}
     )
+def exportar_excel_muller(df, f_num=None, iteraciones=None):
+    return exportar_excel_generico(df, f_num, "Muller", iteraciones)

@@ -323,3 +323,47 @@ def graficar_taylor(f_num, poly_num, x_eval, a, titulo="Aproximación de Taylor"
         ax.set_ylim(min(y_lims) - 2, max(y_lims) + 2)
         
     return fig
+
+def graficar_muller(f, iteraciones):
+    # Usamos la base para configurar el escenario
+    # Adaptamos las keys de Muller (x0, x1, x2) a la estructura de la base
+    iter_adaptadas = []
+    for it in iteraciones:
+        iter_adaptadas.append({"Ci": it["x0"], "Ci+1": it["x3"]})
+
+    fig, ax, xmin_real, xmax_real, margen_x = _configurar_grafica_base(
+        f, iter_adaptadas, factor_margen=0.8
+    )
+
+    for i, it in enumerate(iteraciones):
+        x0, x1, x2, x3 = it["x0"], it["x1"], it["x2"], it["x3"]
+        
+        # Solo graficamos la parábola si x3 es real (el plot no soporta complejos)
+        if isinstance(x3, (complex, np.complex128)):
+            continue
+
+        # Dibujar los 3 puntos que definen la parábola
+        pts_x = [x0, x1, x2]
+        pts_y = [f(x) for x in pts_x]
+        ax.scatter(pts_x, pts_y, s=30, color='black', zorder=4)
+
+        # Construir la parábola local de Muller: P(x) = a(x-x2)^2 + b(x-x2) + c
+        a, b, c = it["a"], it["b"], it["c"]
+        px_range = np.linspace(min(pts_x + [x3]) - 0.2, max(pts_x + [x3]) + 0.2, 100)
+        py_vals = a * (px_range - x2)**2 + b * (px_range - x2) + c
+        
+        label = "Parábola Muller" if i == 0 else ""
+        ax.plot(px_range, py_vals, linestyle=':', alpha=0.5, color='orange', label=label)
+
+    # Raíz final
+    raiz = iteraciones[-1]["x3"]
+    if not isinstance(raiz, (complex, np.complex128)):
+        ax.scatter(
+            raiz, 0,
+            marker='*', s=200, color='gold', edgecolor='orange',
+            label=f"Raíz aprox: {raiz:.4f}", zorder=10
+        )
+
+    ax.set_title("Método de Muller (Aproximación Parabólica)")
+    ax.legend()
+    return fig
