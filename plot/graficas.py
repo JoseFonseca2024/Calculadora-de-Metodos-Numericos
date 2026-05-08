@@ -1,554 +1,245 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-def _configurar_grafica_base(
-    f,
-    iteraciones,
-    incluir_prev=False,
-    factor_margen=0.5
-):
+LIMITE_X = 80
+LIMITE_Y = 30
+LIMITE_FILTRO = 1000
+
+# =========================================================
+# UTILIDADES
+# =========================================================
+
+def _convertir_real(valor):
+    if isinstance(valor, complex):
+        if abs(valor.imag) < 1e-10:
+            return float(valor.real)
+        return None
+    try:
+        return float(valor)
+    except:
+        return None
+
+
+def _evaluar_funcion_segura(f, x):
+    try:
+        y = f(x)
+
+        if isinstance(y, complex):
+            if abs(y.imag) < 1e-10:
+                y = y.real
+            else:
+                return np.nan
+
+        return float(y) if np.isfinite(y) else np.nan
+
+    except:
+        return np.nan
+
+
+# =========================================================
+# CONFIGURACIÓN BASE
+# =========================================================
+
+def _configurar_grafica_base(f, iteraciones, incluir_prev=False, factor_margen=0.5):
 
     fig, ax = plt.subplots(figsize=(10, 6))
 
     xs_all = []
 
     for it in iteraciones:
+        valores = [it.get("Ci"), it.get("Ci+1")]
 
-        valores = [
-            it.get("Ci"),
-            it.get("Ci+1")
-        ]
-
-        if incluir_prev or "Ci-1" in it:
+        if incluir_prev:
             valores.append(it.get("Ci-1"))
 
         for val in valores:
+            real = _convertir_real(val)
+            if real is not None:
+                xs_all.append(real)
 
-            if val is None:
-                continue
-
-            # COMPLEJOS
-            if isinstance(val, complex):
-
-                # Si imag≈0 usar parte real
-                if abs(val.imag) < 1e-10:
-                    xs_all.append(float(val.real))
-
-            else:
-                xs_all.append(float(val))
-
-    # Seguridad
     if not xs_all:
         xs_all = [-10, 10]
 
-    xmin_real = min(xs_all)
-    xmax_real = max(xs_all)
+    xmin, xmax = min(xs_all), max(xs_all)
 
-    rango = abs(xmax_real - xmin_real)
+    rango = max(xmax - xmin, 1)
+    margen = max(rango * factor_margen, 5)
 
-    margen_x = max(rango * factor_margen, 0.5)
+    x_min = xmin - margen
+    x_max = xmax + margen
 
-    if rango < 1:
-        margen_x += 1.5
+    x_vals = np.linspace(x_min, x_max, 5000)
 
-    x_vals = np.linspace(
-        xmin_real - margen_x,
-        xmax_real + margen_x,
-        500
-    )
+    y_vals = np.array([_evaluar_funcion_segura(f, x) for x in x_vals])
 
-    y_vals = []
+    ax.plot(x_vals, y_vals, 'royalblue', linewidth=2.5)
+    ax.axhline(0, color='black')
+    ax.axvline(0, color='black')
 
-    for x in x_vals:
+    ax.set_xlim(max(x_min, -LIMITE_X), min(x_max, LIMITE_X))
+    ax.set_ylim(-LIMITE_Y, LIMITE_Y)
 
-        try:
+    ax.relim()
+    ax.autoscale_view()
 
-            y = f(x)
+    return fig, ax, xmin, xmax, margen
 
-            # FILTRAR COMPLEJOS
-            if isinstance(y, complex):
 
-                if abs(y.imag) < 1e-10:
-                    y = y.real
-                else:
-                    y = np.nan
-
-            y_vals.append(
-                y if np.isfinite(y) else np.nan
-            )
-
-        except (
-            ValueError,
-            ZeroDivisionError,
-            TypeError
-        ):
-
-            y_vals.append(np.nan)
-
-    ax.plot(
-        x_vals,
-        y_vals,
-        linewidth=2,
-        label="f(x)",
-        zorder=2,
-        color='royalblue'
-    )
-
-    ax.axhline(0, color='black', linewidth=1)
-    ax.axvline(0, color='black', linewidth=1)
-
-    return fig, ax, xmin_real, xmax_real, margen_x
-
+# =========================================================
+# NEWTON
+# =========================================================
 
 def graficar_newton(f, iteraciones):
-    fig, ax, xmin_real, xmax_real, margen_x = _configurar_grafica_base(
-        f, iteraciones, factor_margen=0.8
-    )
 
-    for i, it in enumerate(iteraciones):
+    fig, ax, xmin, xmax, _ = _configurar_grafica_base(f, iteraciones)
+
+    for it in iteraciones:
         Ci = it["Ci"]
         Ci_next = it["Ci+1"]
-        fCi = it["f(Ci)"]
 
-        # Punto
-        ax.scatter(Ci, fCi, s=45, zorder=5, color='black')
+        fCi = _evaluar_funcion_segura(f, Ci)
 
-        # Tangente (aproximación visual)
-        label = "Tangentes" if i == 0 else ""
-        ax.plot(
-            [Ci, Ci_next],
-            [fCi, 0],
-            linestyle='--',
-            linewidth=1.5,
-            color='green',
-            alpha=0.7,
-            label=label
-        )
+        if np.isfinite(fCi):
+            ax.scatter(Ci, fCi, color='black')
+            ax.plot([Ci, Ci_next], [fCi, 0], '--', color='green')
 
-        # Proyección vertical
-        try:
-            f_next = f(Ci_next)
-            if np.isfinite(f_next):
-                ax.plot(
-                    [Ci_next, Ci_next],
-                    [0, f_next],
-                    linestyle=':',
-                    color='gray',
-                    alpha=0.6
-                )
-        except (ValueError, ZeroDivisionError, TypeError):
-            pass
-
-        # Etiqueta mejor posicionada
-        ax.text(Ci, fCi, f'$x_{i}$', fontsize=9, ha='right', va='bottom')
-
-    # Raíz final
     raiz = iteraciones[-1]["Ci+1"]
-    ax.scatter(
-        raiz, 0,
-        marker='*',
-        s=200,
-        color='gold',
-        edgecolor='orange',
-        label=f"Raíz: {raiz:.4f}",
-        zorder=10
-    )
+    ax.scatter(raiz, 0, marker='*', s=200, color='gold')
 
-    # Ajuste eje Y
-    ys = [it["f(Ci)"] for it in iteraciones] + [0]
-    ymin, ymax = min(ys), max(ys)
-    margen_y = max(abs(ymax - ymin) * 0.3, 1.0)
-
-    ax.set_xlim(xmin_real - margen_x, xmax_real + margen_x)
-    ax.set_ylim(ymin - margen_y, ymax + margen_y)
-
-    ax.set_title("Método de Newton-Raphson")
-    ax.set_xlabel("x")
-    ax.set_ylabel("f(x)")
-    ax.grid(True, linestyle='--', alpha=0.4)
-    ax.legend()
+    ax.set_title("Newton")
+    ax.grid(True)
 
     return fig
 
+
+# =========================================================
+# SECANTE
+# =========================================================
 
 def graficar_secante(f, iteraciones):
-    fig, ax, xmin_real, xmax_real, margen_x = _configurar_grafica_base(
-        f, iteraciones, incluir_prev=True, factor_margen=0.6
+
+    fig, ax, xmin, xmax, _ = _configurar_grafica_base(
+        f, iteraciones, incluir_prev=True
     )
 
-    for i, it in enumerate(iteraciones):
+    for it in iteraciones:
         Ci = it["Ci"]
-        Ci_prev = it["Ci-1"]
-        Ci_next = it["Ci+1"]
+        Cp = it["Ci-1"]
 
-        fCi = it["f(Ci)"]
-        fCi_prev = it["f(Ci-1)"]
+        f1 = _evaluar_funcion_segura(f, Ci)
+        f0 = _evaluar_funcion_segura(f, Cp)
 
-        # Secante (visual didáctica)
-        label_sec = "Secantes" if i == 0 else ""
-        ax.plot(
-            [Ci_prev, Ci, Ci_next],
-            [fCi_prev, fCi, 0],
-            linestyle='--',
-            linewidth=1.5,
-            color='red',
-            alpha=0.6,
-            label=label_sec
-        )
+        if np.isfinite(f1) and np.isfinite(f0):
+            ax.plot([Cp, Ci], [f0, f1], '--', color='red')
 
-        # Puntos
-        ax.scatter([Ci_prev, Ci], [fCi_prev, fCi], color='black', s=30, zorder=5)
-
-        # Proyección vertical
-        try:
-            f_next = f(Ci_next)
-            if np.isfinite(f_next):
-                ax.plot(
-                    [Ci_next, Ci_next],
-                    [0, f_next],
-                    linestyle=':',
-                    color='gray',
-                    alpha=0.5
-                )
-        except (ValueError, ZeroDivisionError, TypeError):
-            pass
-        # Etiqueta
-        ax.text(Ci, fCi, f'$x_{i}$', fontsize=9, ha='right', va='bottom')
-
-    # Raíz final
     raiz = iteraciones[-1]["Ci+1"]
-    ax.scatter(
-        raiz, 0,
-        marker='*',
-        s=200,
-        color='gold',
-        edgecolor='orange',
-        label=f"Raíz aprox: {raiz:.4f}",
-        zorder=10
-    )
+    ax.scatter(raiz, 0, marker='*', s=200, color='gold')
 
-    # Ajuste eje Y
-    ys = [it["f(Ci)"] for it in iteraciones] + [0]
-    ymin, ymax = min(ys), max(ys)
-    margen_y = max(abs(ymax - ymin) * 0.3, 1.0)
-
-    ax.set_xlim(xmin_real - margen_x, xmax_real + margen_x)
-    ax.set_ylim(ymin - margen_y, ymax + margen_y)
-
-    ax.set_title("Método de la Secante (Visualización de Convergencia)")
-    ax.set_xlabel("x")
-    ax.set_ylabel("f(x)")
-    ax.grid(True, linestyle='--', alpha=0.3)
-    ax.legend()
+    ax.set_title("Secante")
+    ax.grid(True)
 
     return fig
+
+
+# =========================================================
+# PUNTO FIJO
+# =========================================================
 
 def graficar_punto_fijo(g, iteraciones, x_min, x_max):
 
     fig, ax = plt.subplots(figsize=(8, 8))
 
-    x_vals = np.linspace(x_min, x_max, 500)
+    x_vals = np.linspace(x_min, x_max, 4000)
+    y_vals = np.array([_evaluar_funcion_segura(g, x) for x in x_vals])
 
-    # 🔹 y = x
-    ax.plot(x_vals, x_vals, '--', linewidth=2, label='y = x')
+    ax.plot(x_vals, x_vals, '--')
+    ax.plot(x_vals, y_vals)
 
-    # 🔹 g(x)
-    y_vals = []
-    for xv in x_vals:
-        try:
-            y = g(xv)
-            y_vals.append(y if np.isfinite(y) else np.nan)
-        except (ValueError, ZeroDivisionError, TypeError):
-            y_vals.append(np.nan)
+    x = iteraciones[0]["Ci"]
 
-    ax.plot(x_vals, y_vals, linewidth=2, label='g(x)')
-
-    # 🔥 COBWEB CORRECTO
-    x_actual = iteraciones[0]["Ci"]
-
-    for i, it in enumerate(iteraciones):
-
-        try:
-            y = g(x_actual)
-
-            # Vertical
-            ax.plot([x_actual, x_actual], [x_actual, y], 'r--')
-
-            # Horizontal
-            ax.plot([x_actual, y], [y, y], 'b--')
-
-            # Punto
-            ax.scatter(x_actual, y, s=30)
-
-            # Texto (AHORA CORRECTO)
-            ax.text(x_actual, y, f'$x_{{{i}}}$', fontsize=9)
-
-            x_actual = y
-
-        except (ValueError, ZeroDivisionError, TypeError):
+    for it in iteraciones:
+        y = g(x)
+        if not np.isfinite(y):
             break
 
+        ax.plot([x, x], [x, y], 'r--')
+        ax.plot([x, y], [y, y], 'b--')
+        ax.scatter(x, y)
+
+        x = y
+
     raiz = iteraciones[-1]["Ci+1"]
+    ax.scatter(raiz, raiz, marker='*', s=200, color='gold')
 
-    ax.scatter(
-        raiz,
-        raiz,
-        marker='*',
-        s=200,
-        label=f"Raíz: {raiz:.6f}",
-        zorder=10
-    )
-
-    ax.set_title("Método de Punto Fijo (Cobweb)")
-    ax.set_xlabel("x")
-    ax.set_ylabel("g(x)")
-    ax.grid(True)
-    ax.legend()
+    ax.set_xlim(max(x_min, -LIMITE_X), min(x_max, LIMITE_X))
+    ax.set_ylim(-LIMITE_Y, LIMITE_Y)
 
     return fig
+
+
+# =========================================================
+# MÉTODO CERRADO
+# =========================================================
 
 def graficar_metodo_cerrado(f, iteraciones, titulo):
-   
-    iter_adaptadas = []
-    for it in iteraciones:
-        iter_adaptadas.append({
-            "Ci": it["a"], 
-            "Ci+1": it["b"]
-        })
 
-    fig, ax, _, _, _ = _configurar_grafica_base(
-        f, iter_adaptadas, factor_margen=0.6
-    )
+    fig, ax, xmin, xmax, _ = _configurar_grafica_base(f, iteraciones)
 
-    # 2. Dibujar el intervalo final (el más preciso)
     a_final = iteraciones[-1]["a"]
     b_final = iteraciones[-1]["b"]
+
     raiz = iteraciones[-1]["Ci"]
 
-    # Sombreado del intervalo final
-    ax.axvspan(a_final, b_final, color='green', alpha=0.1, label='Intervalo Final')
-    
-    # Líneas verticales de los límites
-    ax.axvline(a_final, color='green', linestyle='--', alpha=0.6, label='Límite a')
-    ax.axvline(b_final, color='orange', linestyle='--', alpha=0.6, label='Límite b')
+    ax.axvspan(a_final, b_final, alpha=0.12)
+    ax.scatter(raiz, 0, marker='*', s=220, color='gold')
 
-    # Marca la raíz 
-    ax.scatter(
-        raiz, 0,
-        marker='*',
-        s=200,
-        color='gold',
-        edgecolor='orange',
-        label=f"Raíz aprox: {raiz:.4f}",
-        zorder=10
-    )
-
-    # Ajustes finales de ejes
     ax.set_title(titulo)
-    ax.set_xlabel("x")
-    ax.set_ylabel("f(x)")
-    ax.grid(True, linestyle='--', alpha=0.3)
-    ax.legend()
+    ax.grid(True)
 
     return fig
 
-def graficar_taylor(f_num, poly_num, x_eval, a, titulo="Aproximación de Taylor"):
-    # Determinamos el rango de visualización basado en el punto 'a' y donde evaluamos
-    puntos = [a, x_eval]
-    centro = sum(puntos) / 2
-    rango = max(abs(x_eval - a) * 2, 4.0)
-    
-    x_vals = np.linspace(centro - rango, centro + rango, 500)
-    
-    fig, ax = plt.subplots(figsize=(10, 6))
-    
-    # 1. Función Original
-    y_f = [f_num(val) for val in x_vals]
-    ax.plot(x_vals, y_f, label="f(x) Original", color='royalblue', linewidth=2.5)
-    
-    # 2. Polinomio de Taylor
-    y_p = [poly_num(val) for val in x_vals]
-    ax.plot(x_vals, y_p, label="Polinomio de Taylor", color='red', linestyle='--', linewidth=2)
-    
-    # Puntos de interés
-    ax.scatter(a, f_num(a), color='black', s=50, label=f"Centro a={a}", zorder=5)
-    ax.scatter(x_eval, poly_num(x_eval), color='orange', marker='X', s=100, label="Punto evaluado", zorder=5)
 
-    ax.axhline(0, color='black', linewidth=1)
-    ax.axvline(0, color='black', linewidth=1)
-    ax.set_title(titulo)
-    ax.legend()
-    ax.grid(True, alpha=0.3)
-    
-    # Limitar eje Y para evitar que crezca al infinito si el polinomio diverge
-    y_lims = [val for val in y_f if np.isfinite(val)]
-    if y_lims:
-        ax.set_ylim(min(y_lims) - 2, max(y_lims) + 2)
-        
-    return fig
+# =========================================================
+# MULLER (arreglado scope)
+# =========================================================
 
 def graficar_muller(f, iteraciones):
 
-    iter_adaptadas = []
+    fig, ax, xmin, xmax, _ = _configurar_grafica_base(f, iteraciones)
 
-    for it in iteraciones:
-
-        x0 = it["x0"]
-        x3 = it["x3"]
-
-        # Convertir complejos con imag≈0
-        if isinstance(x0, complex):
-            if abs(x0.imag) < 1e-10:
-                x0 = x0.real
-            else:
-                continue
-
-        if isinstance(x3, complex):
-            if abs(x3.imag) < 1e-10:
-                x3 = x3.real
-            else:
-                continue
-
-        iter_adaptadas.append({
-            "Ci": x0,
-            "Ci+1": x3
-        })
-
-    fig, ax, _, _, _ = _configurar_grafica_base(
-        f,
-        iter_adaptadas,
-        factor_margen=0.8
-    )
-
-    for i, it in enumerate(iteraciones):
-
-        x0 = it["x0"]
-        x1 = it["x1"]
-        x2 = it["x2"]
-        x3 = it["x3"]
-
-        # Filtrar complejos
-        valores = [x0, x1, x2, x3]
-
-        saltar = False
-
-        nuevos = []
-
-        for val in valores:
-
-            if isinstance(val, complex):
-
-                if abs(val.imag) < 1e-10:
-                    nuevos.append(val.real)
-                else:
-                    saltar = True
-                    break
-
-            else:
-                nuevos.append(val)
-
-        if saltar:
-            continue
-
-        x0, x1, x2, x3 = nuevos
-
-        pts_x = [x0, x1, x2]
-
-        pts_y = []
-
-        for x in pts_x:
-
-            y = f(x)
-
-            if isinstance(y, complex):
-
-                if abs(y.imag) < 1e-10:
-                    y = y.real
-                else:
-                    y = np.nan
-
-            pts_y.append(y)
-
-        ax.scatter(
-            pts_x,
-            pts_y,
-            s=30,
-            color='black',
-            zorder=4
-        )
-
-        a = it["a"]
-        b = it["b"]
-        c = it["c"]
-
-        # Coeficientes complejos
-        if isinstance(a, complex):
-            if abs(a.imag) < 1e-10:
-                a = a.real
-            else:
-                continue
-
-        if isinstance(b, complex):
-            if abs(b.imag) < 1e-10:
-                b = b.real
-            else:
-                continue
-
-        if isinstance(c, complex):
-            if abs(c.imag) < 1e-10:
-                c = c.real
-            else:
-                continue
-
-        px_range = np.linspace(
-            min(pts_x + [x3]) - 0.2,
-            max(pts_x + [x3]) + 0.2,
-            100
-        )
-
-        py_vals = (
-            a * (px_range - x2)**2
-            + b * (px_range - x2)
-            + c
-        )
-
-        label = "Parábola Muller" if i == 0 else ""
-
-        ax.plot(
-            px_range,
-            py_vals,
-            linestyle=':',
-            alpha=0.5,
-            color='orange',
-            label=label
-        )
-
-    raiz = iteraciones[-1]["x3"]
-
-    if isinstance(raiz, complex):
-
-        if abs(raiz.imag) < 1e-10:
-            raiz = raiz.real
-        else:
-            raiz = None
+    raiz = _convertir_real(iteraciones[-1]["x3"])
 
     if raiz is not None:
+        ax.scatter(raiz, 0, marker='*', s=200, color='gold')
 
-        ax.scatter(
-            raiz,
-            0,
-            marker='*',
-            s=200,
-            color='gold',
-            edgecolor='orange',
-            label=f"Raíz aprox: {raiz:.4f}",
-            zorder=10
-        )
+    ax.set_title("Muller")
+    ax.grid(True)
 
-    ax.set_title(
-        "Método de Muller (Aproximación Parabólica)"
-    )
+    return fig
 
-    ax.legend()
+
+# =========================================================
+# TAYLOR (ARREGLADO)
+# =========================================================
+
+def graficar_taylor(f_num, poly_num, x_eval, a, titulo):
+
+    centro = (a + x_eval) / 2
+    rango = max(abs(x_eval - a) * 2, 4)
+
+    x_vals = np.linspace(centro - rango, centro + rango, 3000)
+
+    fig, ax = plt.subplots()
+
+    y_f = np.array([_evaluar_funcion_segura(f_num, x) for x in x_vals])
+    y_p = np.array([_evaluar_funcion_segura(poly_num, x) for x in x_vals])
+
+    ax.plot(x_vals, y_f)
+    ax.plot(x_vals, y_p, '--')
+
+    ax.set_xlim(max(centro - rango, -LIMITE_X), min(centro + rango, LIMITE_X))
+    ax.set_ylim(-LIMITE_Y, LIMITE_Y)
+
+    ax.set_title(titulo)
 
     return fig
