@@ -1,6 +1,6 @@
 import streamlit as st
 import sympy as sp
-from utils.polinomios import validar_Y_preparar_polinomio
+from utils.polinomios import validar_y_preparar_polinomio
 from metodos.bairstow import ejecutar_bairstow
 
 def mostrar_bairstow():
@@ -18,7 +18,7 @@ def mostrar_bairstow():
     )
 
     if st.button("Calcular"):
-        valido, error_msg, datos = validar_Y_preparar_polinomio(polinomio_str)
+        valido, error_msg, datos = validar_y_preparar_polinomio(polinomio_str)
 
         if not valido:
             st.error(error_msg)

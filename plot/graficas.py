@@ -1,36 +1,99 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-def _configurar_grafica_base(f, iteraciones, incluir_prev=False, factor_margen=0.5):
+def _configurar_grafica_base(
+    f,
+    iteraciones,
+    incluir_prev=False,
+    factor_margen=0.5
+):
+
     fig, ax = plt.subplots(figsize=(10, 6))
 
     xs_all = []
+
     for it in iteraciones:
-        xs_all.append(it["Ci"])
-        xs_all.append(it["Ci+1"])
+
+        valores = [
+            it.get("Ci"),
+            it.get("Ci+1")
+        ]
+
         if incluir_prev or "Ci-1" in it:
-            xs_all.append(it.get("Ci-1", it["Ci"]))
+            valores.append(it.get("Ci-1"))
 
-    xmin_real, xmax_real = min(xs_all), max(xs_all)
+        for val in valores:
 
-    # Margen dinámico mejorado
+            if val is None:
+                continue
+
+            # COMPLEJOS
+            if isinstance(val, complex):
+
+                # Si imag≈0 usar parte real
+                if abs(val.imag) < 1e-10:
+                    xs_all.append(float(val.real))
+
+            else:
+                xs_all.append(float(val))
+
+    # Seguridad
+    if not xs_all:
+        xs_all = [-10, 10]
+
+    xmin_real = min(xs_all)
+    xmax_real = max(xs_all)
+
     rango = abs(xmax_real - xmin_real)
+
     margen_x = max(rango * factor_margen, 0.5)
+
     if rango < 1:
         margen_x += 1.5
 
-    x_vals = np.linspace(xmin_real - margen_x, xmax_real + margen_x, 500)
+    x_vals = np.linspace(
+        xmin_real - margen_x,
+        xmax_real + margen_x,
+        500
+    )
 
-    # Evaluación segura
     y_vals = []
+
     for x in x_vals:
+
         try:
+
             y = f(x)
-            y_vals.append(y if np.isfinite(y) else np.nan)
-        except (ValueError, ZeroDivisionError, TypeError):
+
+            # FILTRAR COMPLEJOS
+            if isinstance(y, complex):
+
+                if abs(y.imag) < 1e-10:
+                    y = y.real
+                else:
+                    y = np.nan
+
+            y_vals.append(
+                y if np.isfinite(y) else np.nan
+            )
+
+        except (
+            ValueError,
+            ZeroDivisionError,
+            TypeError
+        ):
+
             y_vals.append(np.nan)
 
-    ax.plot(x_vals, y_vals, linewidth=2, label="f(x)", zorder=2, color='royalblue')
+    ax.plot(
+        x_vals,
+        y_vals,
+        linewidth=2,
+        label="f(x)",
+        zorder=2,
+        color='royalblue'
+    )
+
     ax.axhline(0, color='black', linewidth=1)
     ax.axvline(0, color='black', linewidth=1)
 
@@ -325,45 +388,167 @@ def graficar_taylor(f_num, poly_num, x_eval, a, titulo="Aproximación de Taylor"
     return fig
 
 def graficar_muller(f, iteraciones):
-    # Usamos la base para configurar el escenario
-    # Adaptamos las keys de Muller (x0, x1, x2) a la estructura de la base
-    iter_adaptadas = []
-    for it in iteraciones:
-        iter_adaptadas.append({"Ci": it["x0"], "Ci+1": it["x3"]})
 
-    fig, ax, xmin_real, xmax_real, margen_x = _configurar_grafica_base(
-        f, iter_adaptadas, factor_margen=0.8
+    iter_adaptadas = []
+
+    for it in iteraciones:
+
+        x0 = it["x0"]
+        x3 = it["x3"]
+
+        # Convertir complejos con imag≈0
+        if isinstance(x0, complex):
+            if abs(x0.imag) < 1e-10:
+                x0 = x0.real
+            else:
+                continue
+
+        if isinstance(x3, complex):
+            if abs(x3.imag) < 1e-10:
+                x3 = x3.real
+            else:
+                continue
+
+        iter_adaptadas.append({
+            "Ci": x0,
+            "Ci+1": x3
+        })
+
+    fig, ax, _, _, _ = _configurar_grafica_base(
+        f,
+        iter_adaptadas,
+        factor_margen=0.8
     )
 
     for i, it in enumerate(iteraciones):
-        x0, x1, x2, x3 = it["x0"], it["x1"], it["x2"], it["x3"]
-        
-        # Solo graficamos la parábola si x3 es real (el plot no soporta complejos)
-        if isinstance(x3, (complex, np.complex128)):
+
+        x0 = it["x0"]
+        x1 = it["x1"]
+        x2 = it["x2"]
+        x3 = it["x3"]
+
+        # Filtrar complejos
+        valores = [x0, x1, x2, x3]
+
+        saltar = False
+
+        nuevos = []
+
+        for val in valores:
+
+            if isinstance(val, complex):
+
+                if abs(val.imag) < 1e-10:
+                    nuevos.append(val.real)
+                else:
+                    saltar = True
+                    break
+
+            else:
+                nuevos.append(val)
+
+        if saltar:
             continue
 
-        # Dibujar los 3 puntos que definen la parábola
+        x0, x1, x2, x3 = nuevos
+
         pts_x = [x0, x1, x2]
-        pts_y = [f(x) for x in pts_x]
-        ax.scatter(pts_x, pts_y, s=30, color='black', zorder=4)
 
-        # Construir la parábola local de Muller: P(x) = a(x-x2)^2 + b(x-x2) + c
-        a, b, c = it["a"], it["b"], it["c"]
-        px_range = np.linspace(min(pts_x + [x3]) - 0.2, max(pts_x + [x3]) + 0.2, 100)
-        py_vals = a * (px_range - x2)**2 + b * (px_range - x2) + c
-        
-        label = "Parábola Muller" if i == 0 else ""
-        ax.plot(px_range, py_vals, linestyle=':', alpha=0.5, color='orange', label=label)
+        pts_y = []
 
-    # Raíz final
-    raiz = iteraciones[-1]["x3"]
-    if not isinstance(raiz, (complex, np.complex128)):
+        for x in pts_x:
+
+            y = f(x)
+
+            if isinstance(y, complex):
+
+                if abs(y.imag) < 1e-10:
+                    y = y.real
+                else:
+                    y = np.nan
+
+            pts_y.append(y)
+
         ax.scatter(
-            raiz, 0,
-            marker='*', s=200, color='gold', edgecolor='orange',
-            label=f"Raíz aprox: {raiz:.4f}", zorder=10
+            pts_x,
+            pts_y,
+            s=30,
+            color='black',
+            zorder=4
         )
 
-    ax.set_title("Método de Muller (Aproximación Parabólica)")
+        a = it["a"]
+        b = it["b"]
+        c = it["c"]
+
+        # Coeficientes complejos
+        if isinstance(a, complex):
+            if abs(a.imag) < 1e-10:
+                a = a.real
+            else:
+                continue
+
+        if isinstance(b, complex):
+            if abs(b.imag) < 1e-10:
+                b = b.real
+            else:
+                continue
+
+        if isinstance(c, complex):
+            if abs(c.imag) < 1e-10:
+                c = c.real
+            else:
+                continue
+
+        px_range = np.linspace(
+            min(pts_x + [x3]) - 0.2,
+            max(pts_x + [x3]) + 0.2,
+            100
+        )
+
+        py_vals = (
+            a * (px_range - x2)**2
+            + b * (px_range - x2)
+            + c
+        )
+
+        label = "Parábola Muller" if i == 0 else ""
+
+        ax.plot(
+            px_range,
+            py_vals,
+            linestyle=':',
+            alpha=0.5,
+            color='orange',
+            label=label
+        )
+
+    raiz = iteraciones[-1]["x3"]
+
+    if isinstance(raiz, complex):
+
+        if abs(raiz.imag) < 1e-10:
+            raiz = raiz.real
+        else:
+            raiz = None
+
+    if raiz is not None:
+
+        ax.scatter(
+            raiz,
+            0,
+            marker='*',
+            s=200,
+            color='gold',
+            edgecolor='orange',
+            label=f"Raíz aprox: {raiz:.4f}",
+            zorder=10
+        )
+
+    ax.set_title(
+        "Método de Muller (Aproximación Parabólica)"
+    )
+
     ax.legend()
+
     return fig
