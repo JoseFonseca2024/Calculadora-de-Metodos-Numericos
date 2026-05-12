@@ -1,6 +1,6 @@
 import streamlit as st
-import cmath
 import pandas as pd
+import math
 from utils.polinomios import validar_y_preparar_polinomio
 from metodos.muller import ejecutar_muller
 from Services.procesamiento import filtrar_iteraciones
@@ -16,7 +16,8 @@ def mostrar_muller():
     Este método encuentra raíces mediante una aproximación parabólica
     a través de tres puntos.
 
-    Es ideal para encontrar raíces reales y complejas.
+    Es ideal para encontrar raíces reales mediante
+    aproximaciones parabólicas sucesivas.
     """)
 
     polinomio_str = st.text_input(
@@ -336,7 +337,7 @@ def mostrar_muller():
                     b_coef**2 - 4*a_coef*c_coef
                 )
 
-                sqrt_disc = cmath.sqrt(discriminante)
+                sqrt_disc = math.sqrt(discriminante)
 
                 st.write("### 4.1 Discriminante")
 
@@ -356,30 +357,7 @@ def mostrar_muller():
 
                 # RAÍZ DEL DISCRIMINANTE
 
-                if isinstance(sqrt_disc, complex):
-                    # Si la parte imaginaria es prácticamente 0
-                    if abs(sqrt_disc.imag) < 1e-12:
-
-                        sqrt_disc = sqrt_disc.real
-                        sqrt_text = f"{sqrt_disc:.8f}"
-
-                    else:
-
-                        signo_sqrt = (
-                            "+"
-                            if sqrt_disc.imag >= 0
-                            else "-"
-                        )
-
-                        sqrt_text = (
-                            f"{sqrt_disc.real:.8f}"
-                            f"{signo_sqrt}"
-                            f"{abs(sqrt_disc.imag):.8f}i"
-                        )
-
-                else:
-
-                    sqrt_text = f"{sqrt_disc:.8f}"
+                sqrt_text = f"{sqrt_disc:.8f}"
 
                 st.write("### 4.2 Raíz del discriminante")
 
@@ -399,23 +377,8 @@ def mostrar_muller():
                 den1 = b_coef + sqrt_disc
                 den2 = b_coef - sqrt_disc
 
-                if isinstance(den1, complex):
-
-                    signo_den1 = (
-                        "+"
-                        if den1.imag >= 0
-                        else "-"
-                    )
-
-                    den1_text = (
-                        f"{den1.real:.8f}"
-                        f"{signo_den1}"
-                        f"{abs(den1.imag):.8f}i"
-                    )
-
-                else:
-
-                    den1_text = f"{den1:.8f}"
+                den1_text = f"{den1:.8f}"
+                den2_text = f"{den2:.8f}"
 
                 if isinstance(den2, complex):
 
@@ -513,26 +476,9 @@ def mostrar_muller():
 
                 st.write("### 5. Resultado")
 
-                if isinstance(x3, complex):
-
-                    signo = (
-                        "+"
-                        if x3.imag >= 0
-                        else "-"
-                    )
-
-                    st.latex(
-                        f"x_3 = "
-                        f"{x3.real:.8f}"
-                        f"{signo}"
-                        f"{abs(x3.imag):.8f}i"
-                    )
-
-                else:
-
-                    st.latex(
-                        f"x_3 = {x3:.8f}"
-                    )
+                st.latex(
+                    f"x_3 = {x3:.8f}"
+                )
 
                 st.latex(
                     f"Error = {it['Error%']:.8f}\\%"

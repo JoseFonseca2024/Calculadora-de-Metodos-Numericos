@@ -547,20 +547,71 @@ def graficar_metodo_cerrado(
     titulo
 ):
 
-    x_centrales = []
+    # =====================================================
+    # 1. RECOLECTAR PUNTOS
+    # =====================================================
+
+    puntos_x = []
 
     for it in iteraciones:
 
-        x_centrales.extend([
-            it["a"],
-            it["b"],
-            it["Ci"]
-        ])
+        for clave in ["a", "b", "Ci"]:
+
+            val = _convertir_real(it.get(clave))
+
+            if val is not None and np.isfinite(val):
+                puntos_x.append(val)
+
+    puntos_x = np.array(puntos_x, dtype=float)
+
+    # =====================================================
+    # 2. PROTECCIÓN
+    # =====================================================
+
+    if len(puntos_x) == 0:
+
+        x_min, x_max = -2, 2
+
+    else:
+
+        # eliminar extremos absurdos
+        x_min = np.percentile(puntos_x, 10)
+        x_max = np.percentile(puntos_x, 90)
+
+        if abs(x_max - x_min) < 1e-6:
+            x_min -= 2
+            x_max += 2
+
+    # =====================================================
+    # 3. ZOOM ROBUSTO
+    # =====================================================
+
+    centro = (x_min + x_max) / 2
+
+    ancho = max(
+        (x_max - x_min) * 2,
+        4
+    )
+
+    x_centrales = [
+        centro - ancho,
+        centro + ancho
+    ]
+
+    # =====================================================
+    # 4. FIGURA BASE
+    # =====================================================
 
     fig = crear_grafica_base(
         f,
         x_centrales
     )
+
+    ymin, ymax = fig.layout.yaxis.range
+
+    # =====================================================
+    # 5. RECTÁNGULO FINAL
+    # =====================================================
 
     a_final = iteraciones[-1]["a"]
     b_final = iteraciones[-1]["b"]
@@ -574,6 +625,10 @@ def graficar_metodo_cerrado(
         opacity=0.12,
         line_width=0
     )
+
+    # =====================================================
+    # 6. RAÍZ
+    # =====================================================
 
     fig.add_trace(
         go.Scatter(
@@ -589,12 +644,16 @@ def graficar_metodo_cerrado(
         )
     )
 
+    # mantener viewport original
+    fig.update_yaxes(
+        range=[ymin, ymax]
+    )
+
     fig.update_layout(
         title=titulo
     )
 
     return fig
-
 
 # =========================================================
 # MÜLLER
@@ -602,7 +661,11 @@ def graficar_metodo_cerrado(
 
 def graficar_muller(f, iteraciones):
 
-    x_centrales = []
+    # =====================================================
+    # 1. RECOLECTAR PUNTOS
+    # =====================================================
+
+    puntos_x = []
 
     for it in iteraciones:
 
@@ -617,13 +680,76 @@ def graficar_muller(f, iteraciones):
                 it.get(clave)
             )
 
-            if val is not None:
-                x_centrales.append(val)
+            if (
+                val is not None
+                and np.isfinite(val)
+            ):
+                puntos_x.append(val)
+
+    puntos_x = np.array(
+        puntos_x,
+        dtype=float
+    )
+
+    # =====================================================
+    # 2. PROTECCIÓN
+    # =====================================================
+
+    if len(puntos_x) == 0:
+
+        x_min, x_max = -2, 2
+
+    else:
+
+        # eliminar outliers
+        x_min = np.percentile(
+            puntos_x,
+            10
+        )
+
+        x_max = np.percentile(
+            puntos_x,
+            90
+        )
+
+        # evitar degeneración
+        if abs(x_max - x_min) < 1e-6:
+
+            x_min -= 2
+            x_max += 2
+
+    # =====================================================
+    # 3. ZOOM ROBUSTO
+    # =====================================================
+
+    centro = (
+        x_min + x_max
+    ) / 2
+
+    ancho = max(
+        (x_max - x_min) * 2,
+        4
+    )
+
+    x_centrales = [
+        centro - ancho,
+        centro + ancho
+    ]
+
+    # =====================================================
+    # 4. FIGURA BASE
+    # =====================================================
 
     fig = crear_grafica_base(
         f,
         x_centrales
     )
+
+    ymin, ymax = fig.layout.yaxis.range
+
+    # =====================================================
+    # 5. RAÍZ FINAL
+    # =====================================================
 
     raiz = _convertir_real(
         iteraciones[-1]["x3"]
@@ -645,12 +771,19 @@ def graficar_muller(f, iteraciones):
             )
         )
 
+    # =====================================================
+    # 6. MANTENER VIEWPORT
+    # =====================================================
+
+    fig.update_yaxes(
+        range=[ymin, ymax]
+    )
+
     fig.update_layout(
         title='Método de Müller'
     )
 
     return fig
-
 
 # =========================================================
 # TAYLOR
