@@ -128,7 +128,7 @@ def mostrar_biseccion():
 
         # 🔹 Gráfica
         fig = graficar_metodo_cerrado(f_num, iteraciones, "Bisección")
-        st.pyplot(fig)
+        st.plotly_chart(fig, use_container_width=True)
 
         # 🔹 Exportar
         excel_bytes = exportar_excel_biseccion(df, f_num, iteraciones)

@@ -88,7 +88,7 @@ def mostrar_newton_raphson():
         st.dataframe(pd.DataFrame(iteraciones_visibles))
 
         st.success(f"Raíz aproximada: {iteraciones_visibles[-1]['Ci+1']:.8f}")
-        st.pyplot(graficar_newton(f_num, iteraciones_visibles))
+        st.plotly_chart(graficar_newton(f_num, iteraciones), use_container_width=True)
         
         excel_bytes = exportar_excel_bytes(
             pd.DataFrame(iteraciones_visibles),

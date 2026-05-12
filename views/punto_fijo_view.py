@@ -107,8 +107,8 @@ def mostrar_punto_fijo():
 
                     g_deriv = sp.diff(g_expr, x)
 
-                    g_num = sp.lambdify(x, g_expr, "numpy")
-                    g_deriv_num = sp.lambdify(x, g_deriv, "numpy")
+                    g_num = g_data["num"]
+                    g_deriv_num = sp.lambdify(x, g_deriv, modules=['numpy', {'Pow': lambda b, e: np.sign(b) * np.abs(b)**e if e % 1 != 0 else b**e}])
 
                     val = g_num(x0)
 
@@ -148,7 +148,7 @@ def mostrar_punto_fijo():
                     gs_validas.append({
                         "nombre": g_data["nombre"],
                         "expr": g_expr,
-                        "num": g_num
+                        "num": g_num 
                     })
 
                 except (ValueError, ZeroDivisionError, TypeError, OverflowError):
@@ -204,13 +204,12 @@ def mostrar_punto_fijo():
                             st.latex(f"Error = {it['Error%']:.8f}\\%")
 
                     # 📊 GRÁFICA (CORRECTAMENTE UBICADA)
-                    st.pyplot(
+                    st.plotly_chart(
                         graficar_punto_fijo(
                             g["num"],
-                            iteraciones,
-                            inicio_busqueda,
-                            fin_busqueda
-                        )
+                            iteraciones
+                        ),
+                        use_container_width=True
                     )
 
                     # TABLA

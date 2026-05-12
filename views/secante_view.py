@@ -116,7 +116,7 @@ def mostrar_secante():
         st.success(f"Raíz aproximada: {iteraciones_visibles[-1]['Ci+1']:.8f}")
 
         # 🔹 GRÁFICA
-        st.pyplot(graficar_secante(f_num, iteraciones_visibles))
+        st.plotly_chart(graficar_secante(f_num, iteraciones_visibles), use_container_width=True)
 
         # 🔹 EXPORTAR
         excel_bytes = exportar_excel_secante(

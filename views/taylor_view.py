@@ -133,7 +133,7 @@ def mostrar_taylor():
         # GRÁFICA
         # =====================================================
         st.subheader("3. Comportamiento Gráfico")
-        st.pyplot(graficar_taylor(f_num, res["poly_func_num"], x_eval, a))
+        st.plotly_chart(graficar_taylor(f_num, res["poly_func_num"], x_eval, a, "Serie de Taylor"), use_container_width=True)
 
         # =====================================================
         # EXPORTAR

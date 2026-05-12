@@ -1,7 +1,6 @@
 import io
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
 
 from openpyxl import Workbook
 from openpyxl.drawing.image import Image
@@ -222,7 +221,8 @@ def exportar_excel_generico(
                 f_num,
                 extra_params["poly_func"],
                 extra_params["x_eval"],
-                extra_params["a"]
+                extra_params["a"],
+                "Serie de Taylor"
             )
 
         # Muller
@@ -238,13 +238,10 @@ def exportar_excel_generico(
 
             img_bytes = io.BytesIO()
 
-            fig.savefig(
+            fig.write_image(
                 img_bytes,
-                format='png',
-                bbox_inches='tight'
+                format="png"
             )
-
-            plt.close(fig)
 
             img_bytes.seek(0)
 

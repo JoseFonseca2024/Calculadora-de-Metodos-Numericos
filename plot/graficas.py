@@ -1,88 +1,270 @@
 import numpy as np
-import matplotlib.pyplot as plt
+import plotly.graph_objects as go
 
-LIMITE_X = 80
-LIMITE_Y = 30
-LIMITE_FILTRO = 1000
+# =========================================================
+# CONFIGURACIÓN GLOBAL
+# =========================================================
+
+LIMITE_ABSURDO = 1e12
+MUESTRAS_GRAFICA = 6000
+
+COLOR_FUNCION = 'royalblue'
+COLOR_RAIZ = 'gold'
+COLOR_NEWTON = 'green'
+COLOR_SECANTE = 'red'
+COLOR_VERTICAL = 'red'
+COLOR_HORIZONTAL = 'blue'
 
 # =========================================================
 # UTILIDADES
 # =========================================================
 
 def _convertir_real(valor):
+
     if isinstance(valor, complex):
+
         if abs(valor.imag) < 1e-10:
             return float(valor.real)
+
         return None
+
     try:
         return float(valor)
+
     except:
         return None
 
 
 def _evaluar_funcion_segura(f, x):
     try:
-        y = f(x)
+        with np.errstate(all='ignore'):
+            y = f(x)
 
-        if isinstance(y, complex):
-            if abs(y.imag) < 1e-10:
-                y = y.real
+        # 1. Manejo de complejos de Python y de NumPy
+        if np.iscomplexobj(y):
+            if abs(np.imag(y)) < 1e-10:
+                y = np.real(y)
             else:
                 return np.nan
 
-        return float(y) if np.isfinite(y) else np.nan
+        if np.isnan(y):
+            return np.nan
 
+        if not np.isfinite(y) or abs(y) > LIMITE_ABSURDO:
+            return np.nan
+
+        return float(y)
     except:
         return np.nan
 
+def _filtrar_datos(y_vals):
+
+    y_filtrado = np.copy(y_vals)
+
+    mask = (
+        np.isfinite(y_filtrado)
+        & (np.abs(y_filtrado) < LIMITE_ABSURDO)
+    )
+
+    y_filtrado[~mask] = np.nan
+
+    return y_filtrado
+
 
 # =========================================================
-# CONFIGURACIÓN BASE
+# VIEWPORT INTELIGENTE
 # =========================================================
 
-def _configurar_grafica_base(f, iteraciones, incluir_prev=False, factor_margen=0.5):
+def _crear_viewport(f, x_centrales):
 
-    fig, ax = plt.subplots(figsize=(10, 6))
+    if not x_centrales:
+        x_centrales = [-1, 1]
 
-    xs_all = []
+    xmin = min(x_centrales)
+    xmax = max(x_centrales)
 
-    for it in iteraciones:
-        valores = [it.get("Ci"), it.get("Ci+1")]
+    rango = max(abs(xmax - xmin), 1)
 
-        if incluir_prev:
-            valores.append(it.get("Ci-1"))
-
-        for val in valores:
-            real = _convertir_real(val)
-            if real is not None:
-                xs_all.append(real)
-
-    if not xs_all:
-        xs_all = [-10, 10]
-
-    xmin, xmax = min(xs_all), max(xs_all)
-
-    rango = max(xmax - xmin, 1)
-    margen = max(rango * factor_margen, 5)
+    margen = rango * 0.5
 
     x_min = xmin - margen
     x_max = xmax + margen
 
-    x_vals = np.linspace(x_min, x_max, 5000)
+    x_vals = np.linspace(
+        x_min,
+        x_max,
+        MUESTRAS_GRAFICA
+    )
 
-    y_vals = np.array([_evaluar_funcion_segura(f, x) for x in x_vals])
+    y_vals = np.array([
+        _evaluar_funcion_segura(f, x)
+        for x in x_vals
+    ])
 
-    ax.plot(x_vals, y_vals, 'royalblue', linewidth=2.5)
-    ax.axhline(0, color='black')
-    ax.axvline(0, color='black')
+    y_vals = _filtrar_datos(y_vals)
 
-    ax.set_xlim(max(x_min, -LIMITE_X), min(x_max, LIMITE_X))
-    ax.set_ylim(-LIMITE_Y, LIMITE_Y)
+    # =====================================================
+    # ESCALADO ROBUSTO
+    # =====================================================
 
-    ax.relim()
-    ax.autoscale_view()
+    y_validos = y_vals[np.isfinite(y_vals)]
 
-    return fig, ax, xmin, xmax, margen
+    if len(y_validos) == 0:
+
+        ymin, ymax = -10, 10
+
+    else:
+
+        # percentiles robustos
+        p2 = np.percentile(y_validos, 2)
+        p98 = np.percentile(y_validos, 98)
+
+        # región matemática útil
+        mask_util = (
+            (y_vals >= p2)
+            & (y_vals <= p98)
+        )
+
+        y_util = y_vals[mask_util]
+        y_util = y_util[np.isfinite(y_util)]
+
+        if len(y_util) == 0:
+            y_util = y_validos
+
+        ymin = np.min(y_util)
+        ymax = np.max(y_util)
+
+        # evitar rango cero
+        if abs(ymax - ymin) < 1e-10:
+            ymin -= 1
+            ymax += 1
+
+    yrange = ymax - ymin
+    if yrange < 0.1: yrange = 2        
+
+    ymin = np.clip(ymin, -5, 5) 
+    ymax = np.clip(ymax, -5, 5)
+
+    y_vals = np.where(
+        (
+            y_vals < ymin - yrange * 3
+        ) | (
+            y_vals > ymax + yrange * 3
+        ),
+        np.nan,
+        y_vals
+    )
+
+    return (
+        x_vals,
+        y_vals,
+        x_min,
+        x_max,
+        ymin,
+        ymax
+    )
+
+
+# =========================================================
+# FIGURA BASE
+# =========================================================
+
+def crear_grafica_base(f, x_centrales):
+
+    (
+        x_vals,
+        y_vals,
+        x_min,
+        x_max,
+        ymin,
+        ymax
+    ) = _crear_viewport(f, x_centrales)
+
+    fig = go.Figure()
+
+    fig.update_layout(
+        template='plotly_white', 
+        plot_bgcolor='white',    
+        paper_bgcolor='white',   
+        
+        xaxis=dict(
+            range=[x_min, x_max],
+            gridcolor='lightgray',
+            showgrid=True,
+            zeroline=True,
+            zerolinecolor='black',
+            zerolinewidth=2,
+            tickmode='linear',
+            tickangle=0,
+            dtick=1, 
+            tickfont=dict(color='black', size=12),
+            showticklabels=True  
+        ),
+        yaxis=dict(
+            range=[ymin, ymax],
+            gridcolor='lightgray',
+            showgrid=True,
+            zeroline=True,
+            zerolinecolor='black',
+            zerolinewidth=2,
+            scaleanchor="x",
+            scaleratio=1,
+            tickmode='linear',
+            tickangle=0,
+            dtick=1, 
+            tickfont=dict(color='black', size=12),
+            showticklabels=True  
+        )
+    )
+
+    fig.add_trace(
+        go.Scatter(
+            x=x_vals,
+            y=y_vals,
+            mode='lines',
+            name='f(x)',
+
+            line=dict(
+                color=COLOR_FUNCION,
+                width=2
+            ),
+
+            connectgaps=False
+        )
+    )
+
+    fig.add_hline(
+        y=0,
+        line_color='black',
+        line_width=1
+    )
+
+    fig.add_vline(
+        x=0,
+        line_color='black',
+        line_width=1
+    )
+
+    fig.update_layout(
+
+        template='plotly_white',
+
+        hovermode='closest',
+
+        dragmode='zoom',
+
+        showlegend=False,
+
+        margin=dict(
+            l=30,
+            r=30,
+            t=50,
+            b=30
+        ),
+
+    )
+
+    return fig
 
 
 # =========================================================
@@ -91,23 +273,113 @@ def _configurar_grafica_base(f, iteraciones, incluir_prev=False, factor_margen=0
 
 def graficar_newton(f, iteraciones):
 
-    fig, ax, xmin, xmax, _ = _configurar_grafica_base(f, iteraciones)
+    # =====================================================
+    # 1. RECOLECTAR PUNTOS (con filtro seguro)
+    # =====================================================
+    puntos_x = []
 
     for it in iteraciones:
+        puntos_x.append(it["Ci"])
+        puntos_x.append(it["Ci+1"])
+
+    puntos_x = np.array(puntos_x, dtype=float)
+    puntos_x = puntos_x[np.isfinite(puntos_x)]
+
+    # =====================================================
+    # 2. PROTECCIÓN CONTRA CASOS RAROS
+    # =====================================================
+    if len(puntos_x) == 0:
+        x_min, x_max = -2, 2
+    else:
+        # =================================================
+        # 3. QUITAR OUTLIERS (CLAVE)
+        # =================================================
+        x_min = np.percentile(puntos_x, 10)
+        x_max = np.percentile(puntos_x, 90)
+
+        # si quedó degenerado
+        if abs(x_max - x_min) < 1e-6:
+            x_min -= 2
+            x_max += 2
+
+    # =====================================================
+    # 4. ZOOM ROBUSTO (no dependiente de explosiones)
+    # =====================================================
+    centro = (x_max + x_min) / 2
+    ancho = max((x_max - x_min) * 2, 4)
+
+    x_centrales = [centro - ancho, centro + ancho]
+
+    # =====================================================
+    # 5. FIGURA BASE
+    # =====================================================
+    fig = crear_grafica_base(f, x_centrales)
+
+    ymin, ymax = fig.layout.yaxis.range
+
+    # =====================================================
+    # 6. DIBUJO NEWTON
+    # =====================================================
+    for it in iteraciones:
+
         Ci = it["Ci"]
         Ci_next = it["Ci+1"]
 
         fCi = _evaluar_funcion_segura(f, Ci)
+        fNext = _evaluar_funcion_segura(f, Ci_next)
 
-        if np.isfinite(fCi):
-            ax.scatter(Ci, fCi, color='black')
-            ax.plot([Ci, Ci_next], [fCi, 0], '--', color='green')
+        if not np.isfinite(fCi):
+            continue
 
+        fig.add_trace(go.Scatter(
+            x=[Ci],
+            y=[fCi],
+            mode='markers',
+            marker=dict(color='black', size=7),
+            showlegend=False
+        ))
+
+        fig.add_trace(go.Scatter(
+            x=[Ci, Ci_next],
+            y=[fCi, 0],
+            mode='lines',
+            line=dict(color=COLOR_NEWTON, dash='dash', width=2),
+            showlegend=False
+        ))
+
+        if np.isfinite(fNext):
+            fig.add_trace(go.Scatter(
+                x=[Ci_next, Ci_next],
+                y=[0, fNext],
+                mode='lines',
+                line=dict(color='gray', dash='dot'),
+                showlegend=False
+            ))
+
+    # =====================================================
+    # 7. RAÍZ FINAL
+    # =====================================================
     raiz = iteraciones[-1]["Ci+1"]
-    ax.scatter(raiz, 0, marker='*', s=200, color='gold')
 
-    ax.set_title("Newton")
-    ax.grid(True)
+    fig.add_trace(go.Scatter(
+        x=[raiz],
+        y=[0],
+        mode='markers',
+        marker=dict(
+            symbol='star',
+            size=16,
+            color=COLOR_RAIZ,
+            line=dict(color='black', width=1)
+        ),
+        showlegend=False
+    ))
+
+    # =====================================================
+    # 8. RESTAURAR ESCALA Y EVITAR "APLASTAMIENTO"
+    # =====================================================
+    fig.update_yaxes(range=[ymin, ymax])
+
+    fig.update_layout(title='Método de Newton-Raphson')
 
     return fig
 
@@ -118,11 +390,51 @@ def graficar_newton(f, iteraciones):
 
 def graficar_secante(f, iteraciones):
 
-    fig, ax, xmin, xmax, _ = _configurar_grafica_base(
-        f, iteraciones, incluir_prev=True
-    )
+    # =====================================================
+    # 1. RECOLECTAR PUNTOS DE FORMA SEGURA
+    # =====================================================
+    puntos_x = []
 
     for it in iteraciones:
+        puntos_x.extend([it["Ci-1"], it["Ci"], it["Ci+1"]])
+
+    puntos_x = np.array(puntos_x, dtype=float)
+    puntos_x = puntos_x[np.isfinite(puntos_x)]
+
+    # =====================================================
+    # 2. PROTECCIÓN CONTRA CASOS VACÍOS
+    # =====================================================
+    if len(puntos_x) == 0:
+        x_min, x_max = -2, 2
+    else:
+        # =================================================
+        # 3. ELIMINAR OUTLIERS (CLAVE)
+        # =================================================
+        x_min = np.percentile(puntos_x, 10)
+        x_max = np.percentile(puntos_x, 90)
+
+        if abs(x_max - x_min) < 1e-6:
+            x_min -= 2
+            x_max += 2
+
+    # =====================================================
+    # 4. ZOOM ESTABLE
+    # =====================================================
+    centro = (x_max + x_min) / 2
+    ancho = max((x_max - x_min) * 2, 4)
+
+    x_centrales = [centro - ancho, centro + ancho]
+
+    # =====================================================
+    # 5. FIGURA BASE
+    # =====================================================
+    fig = crear_grafica_base(f, x_centrales)
+
+    # =====================================================
+    # 6. DIBUJO DE SECANTE
+    # =====================================================
+    for it in iteraciones:
+
         Ci = it["Ci"]
         Cp = it["Ci-1"]
 
@@ -130,116 +442,291 @@ def graficar_secante(f, iteraciones):
         f0 = _evaluar_funcion_segura(f, Cp)
 
         if np.isfinite(f1) and np.isfinite(f0):
-            ax.plot([Cp, Ci], [f0, f1], '--', color='red')
 
+            fig.add_trace(go.Scatter(
+                x=[Cp, Ci],
+                y=[f0, f1],
+                mode='lines+markers',
+                line=dict(color=COLOR_SECANTE, dash='dash'),
+                marker=dict(color='black', size=7),
+                showlegend=False
+            ))
+
+    # =====================================================
+    # 7. RAÍZ FINAL
+    # =====================================================
     raiz = iteraciones[-1]["Ci+1"]
-    ax.scatter(raiz, 0, marker='*', s=200, color='gold')
 
-    ax.set_title("Secante")
-    ax.grid(True)
+    fig.add_trace(go.Scatter(
+        x=[raiz],
+        y=[0],
+        mode='markers',
+        marker=dict(
+            symbol='star',
+            size=16,
+            color=COLOR_RAIZ
+        ),
+        showlegend=False
+    ))
+
+    fig.update_layout(title='Método de la Secante')
 
     return fig
-
 
 # =========================================================
 # PUNTO FIJO
 # =========================================================
 
-def graficar_punto_fijo(g, iteraciones, x_min, x_max):
+def graficar_punto_fijo(g, iteraciones):
+    # 1. Recolectar todos los valores de X que tocó el método
+    puntos_x = [it["Ci"] for it in iteraciones] + [it["Ci+1"] for it in iteraciones]
 
-    fig, ax = plt.subplots(figsize=(8, 8))
+    x_min_it = min(puntos_x)
+    x_max_it = max(puntos_x)
 
-    x_vals = np.linspace(x_min, x_max, 4000)
-    y_vals = np.array([_evaluar_funcion_segura(g, x) for x in x_vals])
+    # 2. Calcular ancho y centro para el Viewport
+    ancho = x_max_it - x_min_it
+    ancho_vista = max(ancho * 2, 4) 
+    centro = (x_max_it + x_min_it) / 2
 
-    ax.plot(x_vals, x_vals, '--')
-    ax.plot(x_vals, y_vals)
+    # 🔹 Añadir margen dinámico y rango fijo alrededor de 0
+    x_lims = [min(x_min_it - ancho_vista, -5), max(x_max_it + ancho_vista, 5)]
 
-    x = iteraciones[0]["Ci"]
+    # 3. Usar tu función base para mantener estilos y el viewport inteligente
+    fig = crear_grafica_base(g, x_lims)
 
+    # Línea identidad y=x
+    x_vals = np.linspace(fig.layout.xaxis.range[0], fig.layout.xaxis.range[1], 4000)
+    fig.add_trace(go.Scatter(
+        x=x_vals, y=x_vals,
+        mode='lines',
+        name='y=x',
+        line=dict(dash='dash', color='gray', width=1),
+        showlegend=False
+    ))
+
+    # 4. Dibujar la telaraña
+    x_actual = iteraciones[0]["Ci"]
     for it in iteraciones:
-        y = g(x)
-        if not np.isfinite(y):
-            break
+        y_siguiente = _evaluar_funcion_segura(g, x_actual)
+        if not np.isfinite(y_siguiente): break
 
-        ax.plot([x, x], [x, y], 'r--')
-        ax.plot([x, y], [y, y], 'b--')
-        ax.scatter(x, y)
+        fig.add_trace(go.Scatter(
+            x=[x_actual, x_actual], y=[x_actual, y_siguiente],
+            mode='lines',
+            line=dict(color=COLOR_VERTICAL, width=1, dash='dot'),
+            showlegend=False
+        ))
+        fig.add_trace(go.Scatter(
+            x=[x_actual, y_siguiente], y=[y_siguiente, y_siguiente],
+            mode='lines',
+            line=dict(color=COLOR_HORIZONTAL, width=1, dash='dot'),
+            showlegend=False
+        ))
+        x_actual = y_siguiente
 
-        x = y
-
+    # 5. Marcar la raíz
     raiz = iteraciones[-1]["Ci+1"]
-    ax.scatter(raiz, raiz, marker='*', s=200, color='gold')
+    fig.add_trace(go.Scatter(
+        x=[raiz], y=[raiz],
+        mode='markers',
+        marker=dict(symbol='star', size=15, color=COLOR_RAIZ, line=dict(width=1, color='black')),
+        showlegend=False
+    ))
 
-    ax.set_xlim(max(x_min, -LIMITE_X), min(x_max, LIMITE_X))
-    ax.set_ylim(-LIMITE_Y, LIMITE_Y)
-
+    fig.update_layout(title='Método de Punto Fijo - Diagrama de Telaraña')
     return fig
 
 
-# =========================================================
-# MÉTODO CERRADO
+# MÉTODOS CERRADOS
 # =========================================================
 
-def graficar_metodo_cerrado(f, iteraciones, titulo):
+def graficar_metodo_cerrado(
+    f,
+    iteraciones,
+    titulo
+):
 
-    fig, ax, xmin, xmax, _ = _configurar_grafica_base(f, iteraciones)
+    x_centrales = []
+
+    for it in iteraciones:
+
+        x_centrales.extend([
+            it["a"],
+            it["b"],
+            it["Ci"]
+        ])
+
+    fig = crear_grafica_base(
+        f,
+        x_centrales
+    )
 
     a_final = iteraciones[-1]["a"]
     b_final = iteraciones[-1]["b"]
 
     raiz = iteraciones[-1]["Ci"]
 
-    ax.axvspan(a_final, b_final, alpha=0.12)
-    ax.scatter(raiz, 0, marker='*', s=220, color='gold')
+    fig.add_vrect(
+        x0=a_final,
+        x1=b_final,
+        fillcolor='orange',
+        opacity=0.12,
+        line_width=0
+    )
 
-    ax.set_title(titulo)
-    ax.grid(True)
+    fig.add_trace(
+        go.Scatter(
+            x=[raiz],
+            y=[0],
+            mode='markers',
+            marker=dict(
+                symbol='star',
+                size=16,
+                color=COLOR_RAIZ
+            ),
+            showlegend=False
+        )
+    )
+
+    fig.update_layout(
+        title=titulo
+    )
 
     return fig
 
 
 # =========================================================
-# MULLER (arreglado scope)
+# MÜLLER
 # =========================================================
 
 def graficar_muller(f, iteraciones):
 
-    fig, ax, xmin, xmax, _ = _configurar_grafica_base(f, iteraciones)
+    x_centrales = []
 
-    raiz = _convertir_real(iteraciones[-1]["x3"])
+    for it in iteraciones:
+
+        for clave in [
+            "x0",
+            "x1",
+            "x2",
+            "x3"
+        ]:
+
+            val = _convertir_real(
+                it.get(clave)
+            )
+
+            if val is not None:
+                x_centrales.append(val)
+
+    fig = crear_grafica_base(
+        f,
+        x_centrales
+    )
+
+    raiz = _convertir_real(
+        iteraciones[-1]["x3"]
+    )
 
     if raiz is not None:
-        ax.scatter(raiz, 0, marker='*', s=200, color='gold')
 
-    ax.set_title("Muller")
-    ax.grid(True)
+        fig.add_trace(
+            go.Scatter(
+                x=[raiz],
+                y=[0],
+                mode='markers',
+                marker=dict(
+                    symbol='star',
+                    size=16,
+                    color=COLOR_RAIZ
+                ),
+                showlegend=False
+            )
+        )
+
+    fig.update_layout(
+        title='Método de Müller'
+    )
 
     return fig
 
 
 # =========================================================
-# TAYLOR (ARREGLADO)
+# TAYLOR
 # =========================================================
 
-def graficar_taylor(f_num, poly_num, x_eval, a, titulo):
+def graficar_taylor(
+    f_num,
+    poly_num,
+    x_eval,
+    a,
+    titulo
+):
 
-    centro = (a + x_eval) / 2
-    rango = max(abs(x_eval - a) * 2, 4)
+    centro = a
 
-    x_vals = np.linspace(centro - rango, centro + rango, 3000)
+    rango = max(
+        abs(x_eval - a) * 2,
+        4
+    )
 
-    fig, ax = plt.subplots()
+    x_min = centro - rango
+    x_max = centro + rango
 
-    y_f = np.array([_evaluar_funcion_segura(f_num, x) for x in x_vals])
-    y_p = np.array([_evaluar_funcion_segura(poly_num, x) for x in x_vals])
+    x_vals = np.linspace(
+        x_min,
+        x_max,
+        4000
+    )
 
-    ax.plot(x_vals, y_f)
-    ax.plot(x_vals, y_p, '--')
+    fig = go.Figure()
 
-    ax.set_xlim(max(centro - rango, -LIMITE_X), min(centro + rango, LIMITE_X))
-    ax.set_ylim(-LIMITE_Y, LIMITE_Y)
+    y_f = np.array([
+        _evaluar_funcion_segura(f_num, x)
+        for x in x_vals
+    ])
 
-    ax.set_title(titulo)
+    y_p = np.array([
+        _evaluar_funcion_segura(poly_num, x)
+        for x in x_vals
+    ])
+
+    y_f = _filtrar_datos(y_f)
+    y_p = _filtrar_datos(y_p)
+
+    fig.add_trace(
+        go.Scatter(
+            x=x_vals,
+            y=y_f,
+            mode='lines',
+            name='f(x)',
+            line=dict(width=2)
+        )
+    )
+
+    fig.add_trace(
+        go.Scatter(
+            x=x_vals,
+            y=y_p,
+            mode='lines',
+            name='Taylor',
+            line=dict(
+                dash='dash',
+                width=2
+            )
+        )
+    )
+
+    fig.update_layout(
+        title=titulo,
+        template='plotly_white',
+        hovermode='closest',
+        dragmode='zoom',
+
+        xaxis=dict(
+            range=[x_min, x_max]
+        )
+    )
 
     return fig

@@ -578,7 +578,7 @@ def mostrar_muller():
             iteraciones_visibles
         )
 
-        st.pyplot(fig)
+        st.plotly_chart(fig, use_container_width=True)
 
         # =========================================================
         # EXPORTAR EXCEL

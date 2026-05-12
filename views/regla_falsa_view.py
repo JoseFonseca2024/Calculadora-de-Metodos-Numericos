@@ -154,7 +154,7 @@ def mostrar_regla_falsa():
             iteraciones_visibles,
             "Convergencia: Regla Falsa"
         )
-        st.pyplot(fig)
+        st.plotly_chart(fig, use_container_width=True)
 
         # 🔹 8. Exportar
         excel_bytes = exportar_excel_regla_falsa(
