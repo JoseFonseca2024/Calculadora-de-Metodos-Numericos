@@ -182,6 +182,15 @@ def crear_grafica_base(f, x_centrales):
 
     fig = go.Figure()
 
+    span = x_max - x_min
+
+    if span <= 5:
+        dtick = 0.5
+    elif span <= 20:
+        dtick = 1
+    else:
+        dtick = 5
+
     fig.update_layout(
         template='plotly_white', 
         plot_bgcolor='white',    
@@ -196,7 +205,8 @@ def crear_grafica_base(f, x_centrales):
             zerolinewidth=2,
             tickmode='linear',
             tickangle=0,
-            dtick=1, 
+            dtick = 1,
+            ##tickmode='auto',
             tickfont=dict(color='black', size=12),
             showticklabels=True  
         ),
@@ -208,10 +218,11 @@ def crear_grafica_base(f, x_centrales):
             zerolinecolor='black',
             zerolinewidth=2,
             scaleanchor="x",
-            scaleratio=1,
+            ##scaleratio=1,
             tickmode='linear',
             tickangle=0,
             dtick=1, 
+            ##tickmode='auto',
             tickfont=dict(color='black', size=12),
             showticklabels=True  
         )
@@ -797,46 +808,73 @@ def graficar_taylor(
     titulo
 ):
 
-    centro = a
+    # =====================================================
+    # 1. VIEWPORT ROBUSTO
+    # =====================================================
 
-    rango = max(
-        abs(x_eval - a) * 2,
-        4
+    puntos_x = np.array(
+        [a, x_eval],
+        dtype=float
     )
 
-    x_min = centro - rango
-    x_max = centro + rango
+    puntos_x = puntos_x[np.isfinite(puntos_x)]
+
+    if len(puntos_x) == 0:
+        x_min, x_max = -2, 2
+
+    else:
+
+        x_min = np.percentile(puntos_x, 10)
+        x_max = np.percentile(puntos_x, 90)
+
+        if abs(x_max - x_min) < 1e-6:
+            x_min -= 2
+            x_max += 2
+
+    centro = (x_max + x_min) / 2
+    ancho = max((x_max - x_min) * 3, 6)
+
+    x_centrales = [
+        centro - ancho,
+        centro + ancho
+    ]
+
+    # =====================================================
+    # 2. FIGURA BASE (f(x))
+    # =====================================================
+
+    fig = crear_grafica_base(
+        f_num,
+        x_centrales
+    )
+
+    fig.update_layout(
+        height=650, # Aumenta este valor si la quieres más grande
+        margin=dict(l=50, r=50, t=80, b=50) # Un poco más de margen para los números
+    )
+
+    ymin, ymax = fig.layout.yaxis.range
+
+    # =====================================================
+    # 3. GENERAR TAYLOR
+    # =====================================================
 
     x_vals = np.linspace(
-        x_min,
-        x_max,
+        centro - ancho,
+        centro + ancho,
         4000
     )
-
-    fig = go.Figure()
-
-    y_f = np.array([
-        _evaluar_funcion_segura(f_num, x)
-        for x in x_vals
-    ])
 
     y_p = np.array([
         _evaluar_funcion_segura(poly_num, x)
         for x in x_vals
     ])
 
-    y_f = _filtrar_datos(y_f)
     y_p = _filtrar_datos(y_p)
 
-    fig.add_trace(
-        go.Scatter(
-            x=x_vals,
-            y=y_f,
-            mode='lines',
-            name='f(x)',
-            line=dict(width=2)
-        )
-    )
+    # =====================================================
+    # 4. CURVA TAYLOR
+    # =====================================================
 
     fig.add_trace(
         go.Scatter(
@@ -846,20 +884,45 @@ def graficar_taylor(
             name='Taylor',
             line=dict(
                 dash='dash',
-                width=2
+                width=2,
+                color='red'
             )
         )
     )
 
-    fig.update_layout(
-        title=titulo,
-        template='plotly_white',
-        hovermode='closest',
-        dragmode='zoom',
+    # =====================================================
+    # 5. PUNTO DE EXPANSIÓN
+    # =====================================================
 
-        xaxis=dict(
-            range=[x_min, x_max]
-        )
+    y_aprox = _evaluar_funcion_segura(poly_num, x_eval)
+
+    if np.isfinite(y_aprox):
+        fig.add_trace(
+            go.Scatter(
+                x=[x_eval],      # <--- Cambiado de 'a' a 'x_eval'
+                y=[y_aprox],    # <--- Cambiado de 'y_a' a 'y_aprox'
+                mode='markers',
+                name='Aproximación',
+                marker=dict(
+                    symbol='star',
+                    size=14,
+                    color=COLOR_RAIZ, # O el color que prefieras para el resultado
+                    line=dict(color='black', width=1)
+                ),
+                showlegend=True # Ahora sí conviene mostrar qué es en la leyenda
+            )
+    )
+
+    # =====================================================
+    # 6. RESTAURAR ESCALA
+    # =====================================================
+
+    fig.update_yaxes(
+        range=[ymin, ymax]
+    )
+
+    fig.update_layout(
+        title=titulo
     )
 
     return fig

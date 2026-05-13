@@ -21,7 +21,7 @@ if "metodo" not in st.session_state:
     st.session_state.metodo = None
 
 # Aproximación
-with st.sidebar.expander("Aproximación de un valor"):
+with st.sidebar.expander("Aproximación de un valor", expanded = True):
     if st.button("Serie de Taylor", key = "btn_SerieTaylor"):
         st.session_state.metodo = "Serie de Taylor"
 

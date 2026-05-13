@@ -98,60 +98,119 @@ def mostrar_punto_fijo():
             st.header(f"Raíz #{idx+1} detectada en ({a}, {b})")
             st.success(f"Valor inicial automático X₀ = {x0:.8f}")
 
-            # 🔥 FILTRO DE CONVERGENCIA MEJORADO
+            # FILTRO DE CONVERGENCIA
             gs_validas = []
 
             for g_data in gs:
+
                 try:
+
                     g_expr = g_data["expr"]
 
                     g_deriv = sp.diff(g_expr, x)
 
                     g_num = g_data["num"]
-                    g_deriv_num = sp.lambdify(x, g_deriv, modules=['numpy', {'Pow': lambda b, e: np.sign(b) * np.abs(b)**e if e % 1 != 0 else b**e}])
 
-                    val = g_num(x0)
+                    g_deriv_num = sp.lambdify(
+                        x,
+                        g_deriv,
+                        modules=["numpy"]
+                    )
 
-                    if np.iscomplexobj(val):
-                        if abs(val.imag) > 1e-12:
-                            continue
-                        val = val.real
+                    # =====================================================
+                    # VALIDAR g(x) EN EL INTERVALO
+                    # =====================================================
 
-                    if not np.isfinite(val):
+                    eps = 1e-4
+
+                    xs_test = np.linspace(
+                        a + eps,
+                        b - eps,
+                        25
+                    )
+
+                    derivadas = []
+
+                    valido = True
+
+                    for xt in xs_test:
+
+                        try:
+
+                            val = g_num(xt)
+
+                            if np.iscomplexobj(val):
+
+                                if abs(val.imag) > 1e-10:
+                                    valido = False
+                                    break
+
+                                val = val.real
+
+                            if not np.isfinite(val):
+                                valido = False
+                                break
+
+                            if abs(val) > 1e6:
+                                valido = False
+                                break
+
+                            dv = g_deriv_num(xt)
+
+                            if np.iscomplexobj(dv):
+
+                                if abs(dv.imag) > 1e-10:
+                                    valido = False
+                                    break
+
+                                dv = dv.real
+
+                            if not np.isfinite(dv):
+                                valido = False
+                                break
+
+                            derivadas.append(
+                                abs(float(dv))
+                            )
+
+                        except:
+                            valido = False
+                            break
+
+                    if not valido:
                         continue
 
-                    val = float(val)
+                    # =====================================================
+                    # CRITERIO DE CONVERGENCIA
+                    # =====================================================
 
-                    deriv_val = g_deriv_num(x0)
+                    max_deriv = max(derivadas)
 
-                    if np.iscomplexobj(deriv_val):
-                        if abs(deriv_val.imag) > 1e-12:
-                            continue
-                        deriv_val = deriv_val.real
-
-                    if not np.isfinite(deriv_val):
+                    # ❌ demasiado divergente
+                    if max_deriv >= 2:
                         continue
 
-                    deriv_val = abs(float(deriv_val))
+                    # ⚠️ advertencia convergencia lenta
+                    if max_deriv > 0.9:
 
-                    # ❌ descartar divergentes
-                    if abs(val) > 1e6:
-                        continue
-
-                    if deriv_val >= 1:
-                        continue
-
-                    # ⚠️ advertencia si es casi 1 (lento)
-                    if deriv_val > 0.9:
-                        st.warning(f"{g_data['nombre']} puede converger lento (|g'(x)|≈{deriv_val:.4f})")
+                        st.warning(
+                            f"{g_data['nombre']} puede converger lento "
+                            f"(max |g'(x)| ≈ {max_deriv:.4f})"
+                        )
 
                     gs_validas.append({
                         "nombre": g_data["nombre"],
                         "expr": g_expr,
-                        "num": g_num 
+                        "num": g_num
                     })
 
-                except (ValueError, ZeroDivisionError, TypeError, OverflowError):
+                except (
+                    ValueError,
+                    ZeroDivisionError,
+                    TypeError,
+                    OverflowError,
+                    RecursionError
+                ):
                     continue
 
             if not gs_validas:

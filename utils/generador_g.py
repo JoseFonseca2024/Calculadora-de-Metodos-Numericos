@@ -1,6 +1,7 @@
 import sympy as sp
 import numpy as np
 
+
 def generar_gs_algebraicas(expr):
 
     x = sp.Symbol('x')
@@ -38,9 +39,43 @@ def generar_gs_algebraicas(expr):
             ValueError,
             TypeError,
             NotImplementedError,
-            ZeroDivisionError
+            ZeroDivisionError,
+            RecursionError
         ):
             pass
+
+    # =========================================================
+    # DESPEJE RACIONAL SIMPLE
+    # =========================================================
+
+    try:
+
+        if expr.has(1/x):
+
+            # aislar 1/x
+            despeje = sp.solve(
+                sp.Eq(expr, 0),
+                1/x
+            )
+
+            if despeje:
+
+                rhs = sp.simplify(despeje[0])
+
+                g_racional = sp.simplify(
+                    1 / rhs
+                )
+
+                candidatos.append(g_racional)
+
+    except (
+        ValueError,
+        TypeError,
+        NotImplementedError,
+        ZeroDivisionError,
+        RecursionError
+    ):
+        pass
 
     # =========================================================
     # EXPONENCIALES
@@ -57,28 +92,29 @@ def generar_gs_algebraicas(expr):
 
             if despeje:
 
-                rhs = despeje[0]
+                rhs = sp.simplify(despeje[0])
 
-                argumento = exp_expr.args[0]
+                argumento = sp.expand(exp_expr.args[0])
 
-                eq = sp.Eq(
-                    argumento,
-                    sp.log(rhs)
-                )
+                coef_x = argumento.coeff(x)
 
-                soluciones_x = sp.solve(eq, x)
+                resto = sp.simplify(argumento - coef_x * x)
 
-                for sol in soluciones_x:
+                # solo si argumento es lineal
+                if coef_x != 0 and not resto.has(x):
 
-                    candidatos.append(
-                        sp.simplify(sol)
+                    sol = sp.simplify(
+                        (sp.log(rhs) - resto) / coef_x
                     )
+
+                    candidatos.append(sol)
 
         except (
             ValueError,
             TypeError,
             NotImplementedError,
-            ZeroDivisionError
+            ZeroDivisionError,
+            RecursionError
         ):
             continue
 
@@ -97,28 +133,29 @@ def generar_gs_algebraicas(expr):
 
             if despeje:
 
-                rhs = despeje[0]
+                rhs = sp.simplify(despeje[0])
 
-                argumento = log_expr.args[0]
+                argumento = sp.expand(log_expr.args[0])
 
-                eq = sp.Eq(
-                    argumento,
-                    sp.exp(rhs)
-                )
+                coef_x = argumento.coeff(x)
 
-                soluciones_x = sp.solve(eq, x)
+                resto = sp.simplify(argumento - coef_x * x)
 
-                for sol in soluciones_x:
+                # solo si argumento es lineal
+                if coef_x != 0 and not resto.has(x):
 
-                    candidatos.append(
-                        sp.simplify(sol)
+                    sol = sp.simplify(
+                        (sp.exp(rhs) - resto) / coef_x
                     )
+
+                    candidatos.append(sol)
 
         except (
             ValueError,
             TypeError,
             NotImplementedError,
-            ZeroDivisionError
+            ZeroDivisionError,
+            RecursionError
         ):
             continue
 
@@ -137,28 +174,29 @@ def generar_gs_algebraicas(expr):
 
             if despeje:
 
-                rhs = despeje[0]
+                rhs = sp.simplify(despeje[0])
 
-                interior = raiz.args[0]
+                interior = sp.expand(raiz.args[0])
 
-                eq = sp.Eq(
-                    interior,
-                    rhs**2
-                )
+                coef_x = interior.coeff(x)
 
-                soluciones_x = sp.solve(eq, x)
+                resto = sp.simplify(interior - coef_x * x)
 
-                for sol in soluciones_x:
+                # solo si interior es lineal
+                if coef_x != 0 and not resto.has(x):
 
-                    candidatos.append(
-                        sp.simplify(sol)
+                    sol = sp.simplify(
+                        (rhs**2 - resto) / coef_x
                     )
+
+                    candidatos.append(sol)
 
         except (
             ValueError,
             TypeError,
             NotImplementedError,
-            ZeroDivisionError
+            ZeroDivisionError,
+            RecursionError
         ):
             continue
 
@@ -179,28 +217,29 @@ def generar_gs_algebraicas(expr):
 
                 if despeje:
 
-                    rhs = despeje[0]
+                    rhs = sp.simplify(despeje[0])
 
-                    argumento = trig_expr.args[0]
+                    argumento = sp.expand(trig_expr.args[0])
 
-                    eq = sp.Eq(
-                        argumento,
-                        inv_func(rhs)
-                    )
+                    coef_x = argumento.coeff(x)
 
-                    soluciones_x = sp.solve(eq, x)
+                    resto = sp.simplify(argumento - coef_x * x)
 
-                    for sol in soluciones_x:
+                    # solo si argumento es lineal
+                    if coef_x != 0 and not resto.has(x):
 
-                        candidatos.append(
-                            sp.simplify(sol)
+                        sol = sp.simplify(
+                            (inv_func(rhs) - resto) / coef_x
                         )
+
+                        candidatos.append(sol)
 
             except (
                 ValueError,
                 TypeError,
                 NotImplementedError,
-                ZeroDivisionError
+                ZeroDivisionError,
+                RecursionError
             ):
                 continue
 
@@ -222,26 +261,27 @@ def generar_gs_algebraicas(expr):
 
                     base = -resto / coef
 
-                    g1 = base**sp.Rational(1, potencia)
-
-                    candidatos.append(
-                        sp.simplify(g1)
+                    g1 = sp.simplify(
+                        base**sp.Rational(1, potencia)
                     )
+
+                    candidatos.append(g1)
 
                     # raíz negativa si potencia par
                     if potencia % 2 == 0:
 
-                        g2 = -base**sp.Rational(1, potencia)
-
-                        candidatos.append(
-                            sp.simplify(g2)
+                        g2 = sp.simplify(
+                            -base**sp.Rational(1, potencia)
                         )
+
+                        candidatos.append(g2)
 
             except (
                 ValueError,
                 TypeError,
                 NotImplementedError,
-                ZeroDivisionError
+                ZeroDivisionError,
+                RecursionError
             ):
                 continue
 
@@ -272,7 +312,7 @@ def generar_gs_algebraicas(expr):
                 continue
 
             # evitar expresiones monstruosas
-            if sp.count_ops(g) > 80:
+            if sp.count_ops(g) > 40:
                 continue
 
             # prueba numérica rápida
@@ -289,7 +329,8 @@ def generar_gs_algebraicas(expr):
             ValueError,
             TypeError,
             NotImplementedError,
-            ZeroDivisionError
+            ZeroDivisionError,
+            RecursionError
         ):
             continue
 
@@ -306,25 +347,27 @@ def generar_gs_algebraicas(expr):
             candidatos_unicos.append(g)
 
     # =========================================================
-    # FORMATO FINAL (CON EVALUADOR DE RAÍZ REAL)
+    # FORMATO FINAL
     # =========================================================
-    for i, g in enumerate(candidatos_unicos):
-        g_num = sp.lambdify(
-            x, 
-            g, 
-            modules=[
-                'numpy', 
-                {
-                    'Pow': lambda b, e: np.sign(b) * np.abs(b)**e if (isinstance(e, float) and e < 1 and e != 0) or (isinstance(e, (int, float)) and e % 1 != 0) else b**e
-                }
-            ]
-        )
 
-        gs.append({
-            "nombre": f"g{i+1}(x)",
-            "expr": g,
-            "num": g_num,  # Guardamos la versión numérica ya corregida
-            "latex": sp.latex(g)
-        })
+    for i, g in enumerate(candidatos_unicos):
+
+        try:
+
+            g_num = sp.lambdify(
+                x,
+                g,
+                modules=["numpy"]
+            )
+
+            gs.append({
+                "nombre": f"g{i+1}(x)",
+                "expr": g,
+                "num": g_num,
+                "latex": sp.latex(g)
+            })
+
+        except Exception:
+            continue
 
     return gs
