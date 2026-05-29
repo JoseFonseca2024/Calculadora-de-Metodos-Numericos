@@ -12,7 +12,8 @@ from plot.graficas import (
     graficar_secante,
     graficar_punto_fijo,
     graficar_taylor,
-    graficar_muller
+    graficar_muller,
+    graficar_newton_horner
 )
 
 
@@ -224,6 +225,9 @@ def exportar_excel_generico(
                 extra_params["a"],
                 "Serie de Taylor"
             )
+        
+        elif metodo_nombre == "NewtonHorner" and iteraciones:
+            fig = graficar_newton_horner(f_num, iteraciones)
 
         # Muller
         elif metodo_nombre == "Muller" and iteraciones:
@@ -294,6 +298,7 @@ def exportar_excel_regla_falsa(
     )
 
 
+
 def exportar_excel_newton(
     df,
     f_num=None,
@@ -361,6 +366,7 @@ def exportar_excel_taylor(
     )
 
 
+
 def exportar_excel_muller(
     df,
     f_num=None,
@@ -372,3 +378,17 @@ def exportar_excel_muller(
         "Muller",
         iteraciones
     )
+
+
+def exportar_excel_newton_horner(
+    df,
+    f_num=None,
+    iteraciones=None
+):
+    return exportar_excel_generico(
+        df,
+        f_num,
+        "NewtonHorner",
+        iteraciones
+    )
+

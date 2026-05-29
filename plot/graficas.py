@@ -718,6 +718,7 @@ def graficar_muller(f, iteraciones):
             10
         )
 
+
         x_max = np.percentile(
             puntos_x,
             90
@@ -926,3 +927,99 @@ def graficar_taylor(
     )
 
     return fig
+
+    ax.set_title("Método de Muller (Aproximación Parabólica)")
+    ax.legend()
+    return fig
+
+def graficar_newton_horner(f, iteraciones):
+    fig, ax, xmin_real, xmax_real, margen_x = _configurar_grafica_base(
+        f, 
+        iteraciones,
+        factor_margen=0.8
+    )
+
+    for i, it in enumerate(iteraciones):
+
+        ci = it["Ci"]
+        ci_next = it["Ci+1"]
+
+        fCi = it["Funcion"]
+
+        ax.scatter(
+            ci, 
+            fCi, 
+            s=45, 
+            zorder=5, 
+            color='black'
+        )
+
+        label = "Tangentes Newton_Horner" if i == 0 else ""
+
+        ax.plot(
+            [ci, ci_next],
+            [fCi, 0],
+            linestyle='--',
+            linewidth=1.5,
+            color='green',
+            alpha=0.7,
+            label=label
+        )
+
+        try:   
+            f_next = f(ci_next)
+            if np.isfinite(f_next):
+                ax.plot(
+                    [ci_next, ci_next],
+                    [0, f_next],
+                    linestyle=':',
+                    color='gray',
+                    alpha=0.6
+                )
+        except:
+            pass
+
+        ax.text(
+            ci, 
+            fCi, 
+            f'$x_{i}$', 
+            fontsize=9, 
+            ha='right', 
+            va='bottom'
+        )
+
+        raiz = iteraciones[-1]["Ci+1"]
+
+        ax.scatter(
+            raiz, 
+            0,
+            marker='*',
+            s=200,
+            color='gold',
+            edgecolor='orange',
+            label=f"Raíz: {raiz:.4f}",
+            zorder=10
+        )
+
+        ys= [it["Funcion"] for it in iteraciones] + [0]
+
+        ymin, ymax = min(ys), max(ys)
+
+        margen_y = max(abs(ymax - ymin) * 0.3, 1.0)
+
+        ax.set_xlim(xmin_real - margen_x, xmax_real + margen_x)
+
+        ax.set_ylim(ymin - margen_y, ymax + margen_y)
+
+        ax.set_title("Método de Newton-Horner")
+
+        ax.set_xlabel("x")
+        
+        ax.set_ylabel("f(x)")
+
+        ax.grid(True, linestyle='--', alpha=0.4)
+
+        ax.legend()
+
+        return fig
+

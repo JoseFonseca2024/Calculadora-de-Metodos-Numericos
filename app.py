@@ -9,6 +9,7 @@ from views.punto_fijo_view import mostrar_punto_fijo
 from views.bairstow_view import mostrar_bairstow
 from views.taylor_view import mostrar_taylor
 from views.muller_views import mostrar_muller
+from views.newton_horner_view import mostrar_newton_horner
 
 st.set_page_config(
     page_title="Calculadora de Métodos Numéricos",
@@ -47,6 +48,8 @@ with st.sidebar.expander("Raices de un polinomio", expanded=True):
         st.session_state.metodo = "Bairstow"
     if st.button("Muller"):
         st.session_state.metodo = "Muller"
+    if st.button("Newton-Horner"):
+        st.session_state.metodo = "Newton-Horner"
 
 # Mostrar contenido
 if st.session_state.metodo is None:
@@ -72,3 +75,5 @@ elif st.session_state.metodo == "Bairstow":
     mostrar_bairstow()
 elif st.session_state.metodo == "Muller": 
     mostrar_muller()
+elif st.session_state.metodo == "Newton-Horner": 
+    mostrar_newton_horner()
