@@ -205,7 +205,7 @@ def mostrar_newton_horner():
                     st.latex(
                         f"P(x) = {sp.latex(expr_original)}"
                     )
-                    expr_sustituida = expr_original.subs( x, it["Ci"] )
+                   ## expr_sustituida = expr_original.subs( x, it["Ci"] )
                     st.latex(
                         f"P({it['Ci']:.8f}) = " f"{it['Funcion']:.8f}"
                     )

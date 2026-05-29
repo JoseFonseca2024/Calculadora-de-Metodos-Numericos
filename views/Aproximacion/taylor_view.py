@@ -3,7 +3,7 @@ import pandas as pd
 import math
 import sympy as sp
 
-from metodos.taylor import ejecutar_taylor
+from metodos.Aproimación.taylor import ejecutar_taylor
 from utils.funciones import validar_y_preparar_funcion
 from plot.graficas import graficar_taylor
 from Services.exportar_excel import exportar_excel_taylor
@@ -55,7 +55,7 @@ def mostrar_taylor():
         # =====================================================
         st.subheader("1. Procedimiento y Construcción")
 
-        polinomio_acumulado = ""
+        polinomio_acumulado_expr = 0
 
         for i, it in enumerate(res["iteraciones"]):
 
@@ -88,16 +88,22 @@ def mostrar_taylor():
                 st.latex(rf"T_{{{i}}} = {it['Termino']}")
 
                 # 🔹 6. Polinomio acumulado
-                term_str = str(it["Termino"])
+                polinomio_acumulado_expr += (
+                    it["expr_termino"]
+                )
 
-                if i == 0:
-                    polinomio_acumulado = term_str
-                else:
-                    signo = " + " if not term_str.startswith("-") else " "
-                    polinomio_acumulado += f"{signo}{term_str}"
+                polinomio_simplificado = sp.expand(
+                    sp.simplify(
+                        polinomio_acumulado_expr
+                    )
+                )
 
                 st.markdown("**Polinomio acumulado:**")
-                st.latex(rf"P_{{{i}}}(x) = {polinomio_acumulado}")
+
+                st.latex(
+                    rf"P_{{{i}}}(x) = "
+                    f"{sp.latex(polinomio_simplificado)}"
+                )
 
         # =====================================================
         # TABLA

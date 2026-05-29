@@ -498,7 +498,7 @@ def graficar_punto_fijo(g, iteraciones):
     # 2. Calcular ancho y centro para el Viewport
     ancho = x_max_it - x_min_it
     ancho_vista = max(ancho * 2, 4) 
-    centro = (x_max_it + x_min_it) / 2
+  ##  centro = (x_max_it + x_min_it) / 2
 
     # 🔹 Añadir margen dinámico y rango fijo alrededor de 0
     x_lims = [min(x_min_it - ancho_vista, -5), max(x_max_it + ancho_vista, 5)]

@@ -24,9 +24,10 @@ def ejecutar_taylor(f_simbolica, x, a, n, x_eval):
 
             iteraciones.append({
                 "i": i,
-                "derivada_sym": derivada,   # 🔥 AQUÍ ESTABA EL PROBLEMA
+                "derivada_sym": derivada,   
                 "f^(i)(a)": float(f_i_a.evalf()),
                 "Termino": sp.latex(sp.simplify(termino)),
+                "expr_termino": termino,
                 "Aproximacion": aprox_actual,
                 "Error_Abs": error_abs
             })

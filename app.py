@@ -1,15 +1,17 @@
 import streamlit as st
 
 from views.inicio_view import mostrarInicio
-from views.biseccion_view import mostrar_biseccion
-from views.regla_falsa_view import mostrar_regla_falsa
-from views.newton_raphson_view import mostrar_newton_raphson
-from views.secante_view import mostrar_secante
-from views.punto_fijo_view import mostrar_punto_fijo
-from views.bairstow_view import mostrar_bairstow
-from views.taylor_view import mostrar_taylor
-from views.muller_views import mostrar_muller
-from views.newton_horner_view import mostrar_newton_horner
+from views.RaicesEnoL.biseccion_view import mostrar_biseccion
+from views.RaicesEnoL.regla_falsa_view import mostrar_regla_falsa
+from views.RaicesEnoL.newton_raphson_view import mostrar_newton_raphson
+from views.RaicesEnoL.secante_view import mostrar_secante
+from views.RaicesEnoL.punto_fijo_view import mostrar_punto_fijo
+from views.RaicesPol.bairstow_view import mostrar_bairstow
+from views.Aproximacion.taylor_view import mostrar_taylor
+from views.RaicesPol.muller_views import mostrar_muller
+from views.RaicesPol.newton_horner_view import mostrar_newton_horner
+from views.SEL.jacobi_view import mostrarJacobi
+from views.SEL.gaussseidel_view import mostrargaussSeidel
 
 st.set_page_config(
     page_title="Calculadora de Métodos Numéricos",
@@ -22,12 +24,12 @@ if "metodo" not in st.session_state:
     st.session_state.metodo = None
 
 # Aproximación
-with st.sidebar.expander("Aproximación de un valor", expanded = True):
+with st.sidebar.expander("Aproximación de un valor", expanded = False):
     if st.button("Serie de Taylor", key = "btn_SerieTaylor"):
         st.session_state.metodo = "Serie de Taylor"
 
 # Raíces
-with st.sidebar.expander("Raíces de ecuaciones no lineales", expanded=True):
+with st.sidebar.expander("Raíces de ecuaciones no lineales", expanded=False):
 
     st.markdown("Métodos Cerrados")
     if st.button("Bisección", key = "btn_Bisección"):
@@ -43,13 +45,23 @@ with st.sidebar.expander("Raíces de ecuaciones no lineales", expanded=True):
     if st.button("Punto Fijo"):
         st.session_state.metodo = "Punto Fijo"
 
-with st.sidebar.expander("Raices de un polinomio", expanded=True):
+with st.sidebar.expander("Raices de un polinomio", expanded=False):
     if st.button("Metodo de Bairstow", key = "btnBairstow"):
         st.session_state.metodo = "Bairstow"
     if st.button("Muller"):
         st.session_state.metodo = "Muller"
     if st.button("Newton-Horner"):
         st.session_state.metodo = "Newton-Horner"
+
+#SEL
+with st.sidebar.expander("Sistema de Ecuaciones Lineales", expanded=False):
+    if st.button("Metodo de Jacobi", key = "btnJacobi"):
+        st.session_state.metodo = "Jacobi"
+    if st.button("Metodo de Gauss-Seibel"):
+        st.session_state.metodo = "Gauss-Seibel"
+
+
+
 
 # Mostrar contenido
 if st.session_state.metodo is None:
@@ -77,3 +89,7 @@ elif st.session_state.metodo == "Muller":
     mostrar_muller()
 elif st.session_state.metodo == "Newton-Horner": 
     mostrar_newton_horner()
+elif st.session_state.metodo == "Jacobi":
+    mostrarJacobi()
+elif st.session_state.metodo == "Gauss-Seibel":
+    mostrargaussSeidel()
