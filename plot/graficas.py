@@ -718,7 +718,6 @@ def graficar_muller(f, iteraciones):
             10
         )
 
-
         x_max = np.percentile(
             puntos_x,
             90
@@ -928,98 +927,163 @@ def graficar_taylor(
 
     return fig
 
-    ax.set_title("Método de Muller (Aproximación Parabólica)")
-    ax.legend()
-    return fig
+# =========================================================
+# NEWTON-HORNER
+# =========================================================
 
 def graficar_newton_horner(f, iteraciones):
-    fig, ax, xmin_real, xmax_real, margen_x = _configurar_grafica_base(
-        f, 
-        iteraciones,
-        factor_margen=0.8
+
+    # =====================================================
+    # 1. RECOLECTAR PUNTOS
+    # =====================================================
+
+    puntos_x = []
+
+    for it in iteraciones:
+
+        if "Ci" in it:
+            puntos_x.append(it["Ci"])
+
+        if "Ci+1" in it:
+            puntos_x.append(it["Ci+1"])
+
+    puntos_x = np.array(puntos_x, dtype=float)
+    puntos_x = puntos_x[np.isfinite(puntos_x)]
+
+    # =====================================================
+    # 2. PROTECCIÓN
+    # =====================================================
+
+    if len(puntos_x) == 0:
+
+        x_min, x_max = -2, 2
+
+    else:
+
+        x_min = np.percentile(puntos_x, 10)
+        x_max = np.percentile(puntos_x, 90)
+
+        if abs(x_max - x_min) < 1e-6:
+            x_min -= 2
+            x_max += 2
+
+    # =====================================================
+    # 3. ZOOM ROBUSTO
+    # =====================================================
+
+    centro = (x_max + x_min) / 2
+    ancho = max((x_max - x_min) * 2, 4)
+
+    x_centrales = [
+        centro - ancho,
+        centro + ancho
+    ]
+
+    # =====================================================
+    # 4. FIGURA BASE
+    # =====================================================
+
+    fig = crear_grafica_base(
+        f,
+        x_centrales
     )
 
-    for i, it in enumerate(iteraciones):
+    ymin, ymax = fig.layout.yaxis.range
 
-        ci = it["Ci"]
-        ci_next = it["Ci+1"]
+    # =====================================================
+    # 5. DIBUJAR ITERACIONES
+    # =====================================================
 
-        fCi = it["Funcion"]
+    for it in iteraciones:
 
-        ax.scatter(
-            ci, 
-            fCi, 
-            s=45, 
-            zorder=5, 
-            color='black'
+        Ci = it["Ci"]
+        Ci_next = it["Ci+1"]
+
+        fCi = _evaluar_funcion_segura(f, Ci)
+        fNext = _evaluar_funcion_segura(f, Ci_next)
+
+        if not np.isfinite(fCi):
+            continue
+
+        # Punto sobre la función
+        fig.add_trace(
+            go.Scatter(
+                x=[Ci],
+                y=[fCi],
+                mode='markers',
+                marker=dict(
+                    color='black',
+                    size=7
+                ),
+                showlegend=False
+            )
         )
 
-        label = "Tangentes Newton_Horner" if i == 0 else ""
-
-        ax.plot(
-            [ci, ci_next],
-            [fCi, 0],
-            linestyle='--',
-            linewidth=1.5,
-            color='green',
-            alpha=0.7,
-            label=label
+        # Tangente
+        fig.add_trace(
+            go.Scatter(
+                x=[Ci, Ci_next],
+                y=[fCi, 0],
+                mode='lines',
+                line=dict(
+                    color='purple',
+                    dash='dash',
+                    width=2
+                ),
+                showlegend=False
+            )
         )
 
-        try:   
-            f_next = f(ci_next)
-            if np.isfinite(f_next):
-                ax.plot(
-                    [ci_next, ci_next],
-                    [0, f_next],
-                    linestyle=':',
-                    color='gray',
-                    alpha=0.6
+        # Línea vertical
+        if np.isfinite(fNext):
+
+            fig.add_trace(
+                go.Scatter(
+                    x=[Ci_next, Ci_next],
+                    y=[0, fNext],
+                    mode='lines',
+                    line=dict(
+                        color='gray',
+                        dash='dot'
+                    ),
+                    showlegend=False
                 )
-        except:
-            pass
+            )
 
-        ax.text(
-            ci, 
-            fCi, 
-            f'$x_{i}$', 
-            fontsize=9, 
-            ha='right', 
-            va='bottom'
+    # =====================================================
+    # 6. RAÍZ FINAL
+    # =====================================================
+
+    raiz = iteraciones[-1]["Ci+1"]
+
+    fig.add_trace(
+        go.Scatter(
+            x=[raiz],
+            y=[0],
+            mode='markers',
+            marker=dict(
+                symbol='star',
+                size=16,
+                color=COLOR_RAIZ,
+                line=dict(
+                    color='black',
+                    width=1
+                )
+            ),
+            showlegend=False
         )
+    )
 
-        raiz = iteraciones[-1]["Ci+1"]
+    # =====================================================
+    # 7. RESTAURAR ESCALA
+    # =====================================================
 
-        ax.scatter(
-            raiz, 
-            0,
-            marker='*',
-            s=200,
-            color='gold',
-            edgecolor='orange',
-            label=f"Raíz: {raiz:.4f}",
-            zorder=10
-        )
+    fig.update_yaxes(
+        range=[ymin, ymax]
+    )
 
-        ys= [it["Funcion"] for it in iteraciones] + [0]
+    fig.update_layout(
+        title='Método de Newton-Horner'
+    )
 
-        ymin, ymax = min(ys), max(ys)
-
-        margen_y = max(abs(ymax - ymin) * 0.3, 1.0)
-
-        ax.set_xlim(xmin_real - margen_x, xmax_real + margen_x)
-
-        ax.set_ylim(ymin - margen_y, ymax + margen_y)
-
-        ax.set_title("Método de Newton-Horner")
-
-        ax.set_xlabel("x")
-        
-        ax.set_ylabel("f(x)")
-
-        ax.grid(True, linestyle='--', alpha=0.4)
-
-        ax.legend()
-
-        return fig
-
+    return fig

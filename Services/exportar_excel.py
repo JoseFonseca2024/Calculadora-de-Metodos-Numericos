@@ -9,11 +9,11 @@ from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 from plot.graficas import (
     graficar_metodo_cerrado,
     graficar_newton,
+    graficar_newton_horner,
     graficar_secante,
     graficar_punto_fijo,
     graficar_taylor,
-    graficar_muller,
-    graficar_newton_horner
+    graficar_muller
 )
 
 
@@ -210,9 +210,7 @@ def exportar_excel_generico(
 
             fig = graficar_punto_fijo(
                 extra_params["gs"],
-                iteraciones,
-                extra_params["x_min"],
-                extra_params["x_max"]
+                iteraciones
             )
             
         # Taylor
@@ -225,14 +223,19 @@ def exportar_excel_generico(
                 extra_params["a"],
                 "Serie de Taylor"
             )
-        
-        elif metodo_nombre == "NewtonHorner" and iteraciones:
-            fig = graficar_newton_horner(f_num, iteraciones)
 
         # Muller
         elif metodo_nombre == "Muller" and iteraciones:
 
             fig = graficar_muller(
+                f_num,
+                iteraciones
+            )
+
+        # Newton-Horner
+        elif metodo_nombre == "NewtonHorner" and iteraciones:
+
+            fig = graficar_newton_horner(
                 f_num,
                 iteraciones
             )
@@ -298,7 +301,6 @@ def exportar_excel_regla_falsa(
     )
 
 
-
 def exportar_excel_newton(
     df,
     f_num=None,
@@ -329,8 +331,6 @@ def exportar_excel_punto_fijo(
     df,
     f_num=None,
     gs=None,
-    x_min=None,
-    x_max=None,
     iteraciones=None
 ):
     return exportar_excel_generico(
@@ -339,9 +339,7 @@ def exportar_excel_punto_fijo(
         "PuntoFijo",
         iteraciones,
         {
-            "gs": gs,
-            "x_min": x_min,
-            "x_max": x_max
+            "gs": gs
         }
     )
 
@@ -369,7 +367,7 @@ def exportar_excel_taylor(
 def exportar_excel_muller(
     df,
     f_num=None,
-    iteracions=None
+    iteraciones=None
 ):
     return exportar_excel_generico(
         df,
@@ -377,7 +375,6 @@ def exportar_excel_muller(
         "Muller",
         iteraciones
     )
-
 
 def exportar_excel_newton_horner(
     df,
@@ -390,4 +387,3 @@ def exportar_excel_newton_horner(
         "NewtonHorner",
         iteraciones
     )
-

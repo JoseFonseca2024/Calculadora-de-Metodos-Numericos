@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import sympy as sp
 
-from utils.polinomios import validar_Y_preparar_polinomio
+from utils.polinomios import validar_y_preparar_polinomio
 
 from metodos.newton_horner import ejecutar_newton_horner
 
@@ -47,7 +47,7 @@ def mostrar_newton_horner():
 
     if st.button("Calcular"):
 
-        valido, error_msg, datos = validar_Y_preparar_polinomio(
+        valido, error_msg, datos = validar_y_preparar_polinomio(
             polinomio_str
         )
 
@@ -94,6 +94,8 @@ def mostrar_newton_horner():
             expanded=False
         ):
 
+            mostrar_horner = True
+
             for it in iteraciones:
 
                 idx = it["i"]
@@ -114,255 +116,258 @@ def mostrar_newton_horner():
                     f"C_{{{idx}}} = {it['Ci']:.8f}"
                 )
 
-                # ==========================================
-                # COEFICIENTES
-                # ==========================================
+                if mostrar_horner: 
 
-                st.write(
-                    "## 2. Coeficientes del polinomio"
-                )
+                    # ==========================================
+                    # COEFICIENTES
+                    # ==========================================
 
-                coeficientes_actuales = it["coeficientes"]
-
-                grado_coef = grado
-
-                for j in range(len(coeficientes_actuales)):
-
-                    subindice = grado_coef - j
-
-                    st.latex(
-                        f"A_{{{subindice}}} = "
-                        f"{coeficientes_actuales[j]:.8f}"
+                    st.write(
+                        "## 2. Coeficientes del polinomio"
                     )
 
-                # ==========================================
-                # HORNER
-                # ==========================================
+                    coeficientes_actuales = it["coeficientes"]
 
-                st.write(
-                    "## 3. División sintética de Horner"
-                )
+                    grado_coef = grado
 
-                b = it["b"]
+                    for j in range(len(coeficientes_actuales)):
 
-                grado_actual = grado
-
-                for j in range(len(b)):
-
-                    subindice = grado_actual - j
-
-                    if j == 0:
+                        subindice = grado_coef - j
 
                         st.latex(
-                            f"b_{{{subindice}}} = "
                             f"A_{{{subindice}}} = "
-                            f"{b[j]:.8f}"
+                            f"{coeficientes_actuales[j]:.8f}"
                         )
 
-                    else:
+                    # ==========================================
+                    # HORNER
+                    # ==========================================
 
-                        coef_actual = it["coeficientes"][j]
+                    st.write(
+                        "## 3. División sintética de Horner"
+                    )
 
-                        anterior_subindice = (
-                            grado_actual - (j - 1)
-                        )
+                    b = it["b"]
 
-                        anterior = b[j - 1]
+                    grado_actual = grado
 
-                        st.latex(
-                            f"b_{{{subindice}}} = "
-                            f"A_{{{subindice}}} + "
-                            f"({it['Ci']:.8f})"
-                            f"(b_{{{anterior_subindice}}})"
-                        )
+                    for j in range(len(b)):
 
-                        st.latex(
-                            f"b_{{{subindice}}} = "
-                            f"{coef_actual:.8f} + "
-                            f"({it['Ci']:.8f})"
-                            f"({anterior:.8f})"
-                        )
+                        subindice = grado_actual - j
 
-                        st.latex(
-                            f"b_{{{subindice}}} = "
-                            f"{b[j]:.8f}"
-                        )
+                        if j == 0:
 
-                # ==========================================
-                # EVALUAR P(C)
-                # ==========================================
+                            st.latex(
+                                f"b_{{{subindice}}} = "
+                                f"A_{{{subindice}}} = "
+                                f"{b[j]:.8f}"
+                            )
 
-                st.write(
-                    "## 4. Evaluación de la raíz en P(x)"
-                )
+                        else:
 
-                expr_original = sp.expand(p_sym)
+                            coef_actual = it["coeficientes"][j]
 
-                st.latex(
-                    f"P(x) = {sp.latex(expr_original)}"
-                )
-                expr_sustituida = expr_original.subs( x, it["Ci"] )
-                st.latex(
-                    f"P({it['Ci']:.8f}) = " f"{it['Funcion']:.8f}"
-                )
+                            anterior_subindice = (
+                                grado_actual - (j - 1)
+                            )
 
-                st.latex(
-                    f"Residuo = b_0 = " f"{it['Residuo']:.8f}"
-                )
+                            anterior = b[j - 1]
 
-                # ==========================================
-                # Q(X)
-                # ==========================================
+                            st.latex(
+                                f"b_{{{subindice}}} = "
+                                f"A_{{{subindice}}} + "
+                                f"({it['Ci']:.8f})"
+                                f"(b_{{{anterior_subindice}}})"
+                            )
 
-                st.write(
-                    "## 5. Construcción de Q(x)"
-                )
+                            st.latex(
+                                f"b_{{{subindice}}} = "
+                                f"{coef_actual:.8f} + "
+                                f"({it['Ci']:.8f})"
+                                f"({anterior:.8f})"
+                            )
 
-                q_coef = b[:-1]
+                            st.latex(
+                                f"b_{{{subindice}}} = "
+                                f"{b[j]:.8f}"
+                            )
 
-                partes_q = []
+                    # ==========================================
+                    # EVALUAR P(C)
+                    # ==========================================
 
-                grado_q = grado - 1
+                    st.write(
+                        "## 4. Evaluación de la raíz en P(x)"
+                    )
 
-                for j in range(len(q_coef)):
+                    expr_original = sp.expand(p_sym)
 
-                    coef = q_coef[j]
+                    st.latex(
+                        f"P(x) = {sp.latex(expr_original)}"
+                    )
+                    expr_sustituida = expr_original.subs( x, it["Ci"] )
+                    st.latex(
+                        f"P({it['Ci']:.8f}) = " f"{it['Funcion']:.8f}"
+                    )
 
-                    exponente = grado_q - j
+                    st.latex(
+                        f"Residuo = b_0 = " f"{it['Residuo']:.8f}"
+                    )
 
-                    if exponente > 1:
+                    # ==========================================
+                    # Q(X)
+                    # ==========================================
 
-                        partes_q.append(
-                            f"({coef:.8f})x^{exponente}"
-                        )
+                    st.write(
+                        "## 5. Construcción de Q(x)"
+                    )
 
-                    elif exponente == 1:
+                    q_coef = b[:-1]
 
-                        partes_q.append(
-                            f"({coef:.8f})x"
-                        )
+                    partes_q = []
 
-                    else:
+                    grado_q = grado - 1
 
-                        partes_q.append(
-                            f"({coef:.8f})"
-                        )
+                    for j in range(len(q_coef)):
 
-                q_string = " + ".join(partes_q)
+                        coef = q_coef[j]
 
-                st.latex(
-                    f"Q(x) = {q_string}"
-                )
+                        exponente = grado_q - j
 
-                # ==========================================
-                # DERIVADA ORIGINAL
-                # ==========================================
+                        if exponente > 1:
 
-                st.write(
-                    "## 6. Primera derivada de P(x)"
-                )
+                            partes_q.append(
+                                f"({coef:.8f})x^{exponente}"
+                            )
 
-                derivada_expr = sp.diff(
-                    p_sym,
-                    x
-                )
+                        elif exponente == 1:
 
-                st.latex(
-                    f"P'(x) = "
-                    f"{sp.latex(derivada_expr)}"
-                )
+                            partes_q.append(
+                                f"({coef:.8f})x"
+                            )
 
-                # ==========================================
-                # EVALUAR Q(C)
-                # ==========================================
+                        else:
 
-                st.write(
-                    "## 7. Evaluar Q(C)"
-                )
+                            partes_q.append(
+                                f"({coef:.8f})"
+                            )
 
-                xq = sp.Symbol("x")
+                    q_string = " + ".join(partes_q)
 
-                q_expr = 0
+                    st.latex(
+                        f"Q(x) = {q_string}"
+                    )
 
-                grado_q = grado - 1
+                    # ==========================================
+                    # DERIVADA ORIGINAL
+                    # ==========================================
 
-                for j in range(len(q_coef)):
+                    st.write(
+                        "## 6. Primera derivada de P(x)"
+                    )
 
-                    q_expr += q_coef[j] * xq**(grado_q - j)
+                    derivada_expr = sp.diff(
+                        p_sym,
+                        x
+                    )
 
-                st.latex(
-                    f"Q(x) = {sp.latex(q_expr)}"
-                )
+                    st.latex(
+                        f"P'(x) = "
+                        f"{sp.latex(derivada_expr)}"
+                    )
 
-                q_eval = q_expr.subs(
-                    xq,
-                    it["Ci"]
-                )
+                    # ==========================================
+                    # EVALUAR Q(C)
+                    # ==========================================
 
-                st.latex(
-                    f"Q({it['Ci']:.8f}) = "
-                    f"{sp.latex(q_eval)}"
-                )
+                    st.write(
+                        "## 7. Evaluar Q(C)"
+                    )
 
-                st.latex(
-                    f"Q({it['Ci']:.8f}) = "
-                    f"{it['Derivada']:.8f}"
-                )
+                    xq = sp.Symbol("x")
 
+                    q_expr = 0
 
+                    grado_q = grado - 1
 
-                # ==========================================
-                # EVALUAR P'(C)
-                # ==========================================
+                    for j in range(len(q_coef)):
 
-                
-                st.write(
-                    "## 8. Evaluar P'(C)"
-                )
+                        q_expr += q_coef[j] * xq**(grado_q - j)
 
-                st.latex(
-                    f"P'(x) = {sp.latex(derivada_expr)}"
-                )
+                    st.latex(
+                        f"Q(x) = {sp.latex(q_expr)}"
+                    )
 
-                derivada_sustituida = derivada_expr.subs(
-                    x,
-                    it["Ci"]
-                )
+                    q_eval = q_expr.subs(
+                        xq,
+                        it["Ci"]
+                    )
 
-                st.latex(
-                    f"P'({it['Ci']:.8f}) = "
-                    f"{sp.latex(derivada_sustituida)}"
-                )
+                    st.latex(
+                        f"Q({it['Ci']:.8f}) = "
+                        f"{sp.latex(q_eval)}"
+                    )
 
-                derivada_real = float(
-                    derivada_sustituida
-                )
-
-                st.latex(
-                    f"P'({it['Ci']:.8f}) = "
-                    f"{derivada_real:.8f}"
-                )
+                    st.latex(
+                        f"Q({it['Ci']:.8f}) = "
+                        f"{it['Derivada']:.8f}"
+                    )
 
 
 
-                # ==========================================
-                # VERIFICACION
-                # ==========================================
+                    # ==========================================
+                    # EVALUAR P'(C)
+                    # ==========================================
 
-                st.write(
-                    "## 9. Verificación"
-                )
+                    
+                    st.write(
+                        "## 8. Evaluar P'(C)"
+                    )
 
-                st.latex(
-                    f"Q({it['Ci']:.8f}) = "
-                    f"P'({it['Ci']:.8f})"
-                )
+                    st.latex(
+                        f"P'(x) = {sp.latex(derivada_expr)}"
+                    )
 
-                st.latex(
-                    f"{it['Derivada']:.8f} = "
-                    f"{float(derivada_real):.8f}"
-                )
+                    derivada_sustituida = derivada_expr.subs(
+                        x,
+                        it["Ci"]
+                    )
 
+                    st.latex(
+                        f"P'({it['Ci']:.8f}) = "
+                        f"{sp.latex(derivada_sustituida)}"
+                    )
+
+                    derivada_real = float(
+                        derivada_sustituida
+                    )
+
+                    st.latex(
+                        f"P'({it['Ci']:.8f}) = "
+                        f"{derivada_real:.8f}"
+                    )
+
+
+
+                    # ==========================================
+                    # VERIFICACION
+                    # ==========================================
+
+                    st.write(
+                        "## 9. Verificación"
+                    )
+
+                    st.latex(
+                        f"Q({it['Ci']:.8f}) = "
+                        f"P'({it['Ci']:.8f})"
+                    )
+
+                    st.latex(
+                        f"{it['Derivada']:.8f} = "
+                        f"{float(derivada_real):.8f}"
+                    )
+
+                mostrar_horner = False
                 # ==========================================
                 # NEWTON-RAPHSON
                 # ==========================================
@@ -455,7 +460,7 @@ def mostrar_newton_horner():
             iteraciones_visibles
         )
 
-        st.pyplot(fig)
+        st.plotly_chart(fig, use_container_width=True)
 
         # ==========================================
         # EXPORTAR EXCEL
