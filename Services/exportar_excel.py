@@ -366,11 +366,10 @@ def exportar_excel_taylor(
     )
 
 
-
 def exportar_excel_muller(
     df,
     f_num=None,
-    iteraciones=None
+    iteracions=None
 ):
     return exportar_excel_generico(
         df,
