@@ -1,4 +1,5 @@
 import streamlit as st
+import pandas as pd
 
 from views.inicio_view import mostrarInicio
 from views.RaicesEnoL.biseccion_view import mostrar_biseccion
@@ -12,6 +13,10 @@ from views.RaicesPol.muller_views import mostrar_muller
 from views.RaicesPol.newton_horner_view import mostrar_newton_horner
 from views.SEL.jacobi_view import mostrarJacobi
 from views.SEL.gaussseidel_view import mostrargaussSeidel
+from views.Interpolacion.PolNewton_view import mostrarPolNewton
+
+if "ultimo_metodo" not in st.session_state:
+    st.session_state.ultimo_metodo = None
 
 st.set_page_config(
     page_title="Calculadora de Métodos Numéricos",
@@ -60,8 +65,40 @@ with st.sidebar.expander("Sistema de Ecuaciones Lineales", expanded=False):
     if st.button("Metodo de Gauss-Seibel"):
         st.session_state.metodo = "Gauss-Seibel"
 
+#Ajuste por interpolación
+with st.sidebar.expander("Ajuste de funciones por interpolación", expanded=False):
+    st.markdown("Ajuste de curvas discretas por minimos cuadrados")
+    if st.button("Modelo de regresión simple", key = "btnRegresionSimple"):
+        st.session_state.metodo = "Regresión simple"
+
+    if st.button("Modelo de regresión cuadratica", key = "btnRegresionCuadratica"):
+        st.session_state.metodo = "Regresión Cuadratica"
+
+    st.markdown("Ajuste por polinomios interpolares")
+    if st.button("Polinomio de Newton por diferencias divididas", key = "btnPolNewton"):
+        st.session_state.metodo = "Polinomio de Newton"
+
+    if st.button("Polinomio interpolante de lagrange", key = "btnPolLagrange"):
+        st.session_state.metodo = "Polinimio de Lagrange"
 
 
+# CAMBIO DE MÉTODO
+
+if st.session_state.metodo != st.session_state.ultimo_metodo:
+
+    if st.session_state.metodo == "Polinomio de Newton":
+
+        st.session_state.tabla_newton = pd.DataFrame(
+            {
+                "x": [None],
+                "f(x)": [None]
+            }
+        )
+
+        if "editor_newton" in st.session_state:
+            del st.session_state["editor_newton"]
+
+    st.session_state.ultimo_metodo = st.session_state.metodo
 
 # Mostrar contenido
 if st.session_state.metodo is None:
@@ -93,3 +130,5 @@ elif st.session_state.metodo == "Jacobi":
     mostrarJacobi()
 elif st.session_state.metodo == "Gauss-Seibel":
     mostrargaussSeidel()
+elif st.session_state.metodo == "Polinomio de Newton":
+    mostrarPolNewton()

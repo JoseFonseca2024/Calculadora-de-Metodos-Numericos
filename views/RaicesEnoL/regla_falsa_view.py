@@ -4,7 +4,7 @@ import re
 
 from utils.funciones import validar_y_preparar_funcion
 from utils.formateo import fmt
-from metodos.regla_falsa import ejecutar_regla_falsa
+from metodos.Polinomios_y_Funciones.regla_falsa import ejecutar_regla_falsa
 from Services.procesamiento import filtrar_iteraciones
 from plot.graficas import graficar_metodo_cerrado
 from Services.exportar_excel import exportar_excel_regla_falsa

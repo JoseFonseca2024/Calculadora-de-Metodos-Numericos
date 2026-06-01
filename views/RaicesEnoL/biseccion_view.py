@@ -1,7 +1,7 @@
 import streamlit as st
 
 from utils.funciones import validar_y_preparar_funcion
-from metodos.biseccion import ejecutar_biseccion
+from metodos.Polinomios_y_Funciones.biseccion import ejecutar_biseccion
 from plot.graficas import graficar_metodo_cerrado
 from Services.exportar_excel import exportar_excel_biseccion
 from Services.procesamiento import convertir_biseccion_a_tabla

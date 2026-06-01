@@ -2,7 +2,7 @@ import streamlit as st
 import sympy as sp
 import pandas as pd
 from utils.funciones import validar_y_preparar_funcion
-from metodos.newton_raphson import ejecutar_newton_raphson
+from metodos.Polinomios_y_Funciones.newton_raphson import ejecutar_newton_raphson
 from Services.procesamiento import filtrar_iteraciones
 from plot.graficas import graficar_newton
 from Services.exportar_excel import exportar_excel_newton as exportar_excel_bytes

@@ -7,7 +7,7 @@ from utils.funciones import validar_y_preparar_funcion
 from utils.generador_g import generar_gs_algebraicas
 from utils.intervalos import encontrar_intervalos_raiz
 
-from metodos.punto_fijo import ejecutar_punto_fijo
+from metodos.Polinomios_y_Funciones.punto_fijo import ejecutar_punto_fijo
 
 from plot.graficas import graficar_punto_fijo
 from Services.exportar_excel import exportar_excel_punto_fijo

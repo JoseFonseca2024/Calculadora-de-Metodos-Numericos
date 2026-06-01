@@ -4,7 +4,7 @@ import sympy as sp
 
 from utils.polinomios import validar_y_preparar_polinomio
 
-from metodos.newton_horner import ejecutar_newton_horner
+from metodos.Polinomios_y_Funciones.newton_horner import ejecutar_newton_horner
 
 from plot.graficas import graficar_newton_horner
 

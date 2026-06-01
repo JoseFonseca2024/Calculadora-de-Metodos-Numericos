@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import math
 from utils.polinomios import validar_y_preparar_polinomio
-from metodos.muller import ejecutar_muller
+from metodos.Polinomios_y_Funciones.muller import ejecutar_muller
 from Services.procesamiento import filtrar_iteraciones
 from plot.graficas import graficar_muller
 from Services.exportar_excel import exportar_excel_muller

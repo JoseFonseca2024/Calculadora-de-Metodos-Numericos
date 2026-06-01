@@ -2,7 +2,7 @@ import streamlit as st
 import sympy as sp
 
 from utils.polinomios import validar_y_preparar_polinomio
-from metodos.bairstow import ejecutar_bairstow
+from metodos.Polinomios_y_Funciones.bairstow import ejecutar_bairstow
 
 
 def limpiar(valor, tol=1e-10):
