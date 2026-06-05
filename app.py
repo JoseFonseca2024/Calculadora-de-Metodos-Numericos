@@ -14,6 +14,7 @@ from views.RaicesPol.newton_horner_view import mostrar_newton_horner
 from views.SEL.jacobi_view import mostrarJacobi
 from views.SEL.gaussseidel_view import mostrargaussSeidel
 from views.Interpolacion.PolNewton_view import mostrarPolNewton
+from views.Interpolacion.PolLagrange_view import mostrarPolLagrange
 
 if "ultimo_metodo" not in st.session_state:
     st.session_state.ultimo_metodo = None
@@ -132,3 +133,5 @@ elif st.session_state.metodo == "Gauss-Seibel":
     mostrargaussSeidel()
 elif st.session_state.metodo == "Polinomio de Newton":
     mostrarPolNewton()
+elif st.session_state.metodo == "Polinimio de Lagrange":
+    mostrarPolLagrange()
