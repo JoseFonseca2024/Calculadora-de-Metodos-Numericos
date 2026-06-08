@@ -15,6 +15,7 @@ from views.SEL.jacobi_view import mostrarJacobi
 from views.SEL.gaussseidel_view import mostrargaussSeidel
 from views.Interpolacion.PolNewton_view import mostrarPolNewton
 from views.Interpolacion.PolLagrange_view import mostrarPolLagrange
+from views.Interpolacion.TrazadoresCubic_view import mostrarTrazadoresCubicos
 
 if "ultimo_metodo" not in st.session_state:
     st.session_state.ultimo_metodo = None
@@ -81,6 +82,9 @@ with st.sidebar.expander("Ajuste de funciones por interpolación", expanded=Fals
 
     if st.button("Polinomio interpolante de lagrange", key = "btnPolLagrange"):
         st.session_state.metodo = "Polinimio de Lagrange"
+    
+    if st.button("Interpolación por trazadores cubicos", key = "btnTrazCub"):
+        st.session_state.metodo = "Trazadores cubicos"
 
 
 # CAMBIO DE MÉTODO
@@ -135,3 +139,5 @@ elif st.session_state.metodo == "Polinomio de Newton":
     mostrarPolNewton()
 elif st.session_state.metodo == "Polinimio de Lagrange":
     mostrarPolLagrange()
+elif st.session_state.metodo == "Trazadores cubicos":
+    mostrarTrazadoresCubicos()
