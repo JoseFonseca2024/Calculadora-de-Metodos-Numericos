@@ -16,6 +16,9 @@ from views.SEL.gaussseidel_view import mostrargaussSeidel
 from views.Interpolacion.PolNewton_view import mostrarPolNewton
 from views.Interpolacion.PolLagrange_view import mostrarPolLagrange
 from views.Interpolacion.TrazadoresCubic_view import mostrarTrazadoresCubicos
+from views.Integrales.trapecio_view import mostrarRegladelTrapecio
+from views.Integrales.Simpson13_view import mostrarSimpson1_3
+from views.Integrales.Simpson3_8_view import mostrarSimpson3_8
 
 if "ultimo_metodo" not in st.session_state:
     st.session_state.ultimo_metodo = None
@@ -86,6 +89,15 @@ with st.sidebar.expander("Ajuste de funciones por interpolación", expanded=Fals
     if st.button("Interpolación por trazadores cubicos", key = "btnTrazCub"):
         st.session_state.metodo = "Trazadores cubicos"
 
+#Integración por aproximación
+with st.sidebar.expander("Integración por aproximación", expanded= False):
+    if st.button("Regla del Trapecio", key = "btnRegladelTrapecio"):
+        st.session_state.metodo = "Regla del Trapecio"
+    if st.button("Simpson 1/3", key="btnSimpson1/3"):
+        st.session_state.metodo = "Simpson 1/3"
+    if st.button("Simpson 3/8", key="btnSimpson3/8"):
+        st.session_state.metodo = "Simpson 3/8"
+
 
 # CAMBIO DE MÉTODO
 
@@ -141,3 +153,9 @@ elif st.session_state.metodo == "Polinimio de Lagrange":
     mostrarPolLagrange()
 elif st.session_state.metodo == "Trazadores cubicos":
     mostrarTrazadoresCubicos()
+elif st.session_state.metodo == "Regla del Trapecio":
+    mostrarRegladelTrapecio()
+elif st.session_state.metodo == "Simpson 1/3":
+    mostrarSimpson1_3()
+elif st.session_state.metodo == "Simpson 3/8":
+    mostrarSimpson3_8()
